@@ -335,7 +335,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsq4cpo';
+const ASSET_V = '?v=mtsq7crk';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -1139,9 +1139,11 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
   unlockEl.playsInline = true;
   unlockEl.muted = true;
   let unlocked = false;
+  let speaking = false;          // いま el で しゃべって いるか
   function unlockVoice() {
     if (unlocked) return;
     unlocked = true;
+    // 予備の 要素
     try {
       unlockEl.src = BASE + FIRST;
       const p = unlockEl.play();
@@ -1149,6 +1151,21 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
       if (p && p.then) p.then(fin).catch(() => {});
       else fin();
     } catch {}
+    // ★ しゃべる 要素も この タップの 中で 一度 鳴らして 解錠する。
+    //   iOS の 解錠は 要素ごと。ここを やらないと、
+    //   クイズの「りんご」「いぬ」が いっさい 鳴らなく なる。
+    //   すぐ あとに セリフが 始まって いる ときは 止めない（speaking で 判定）。
+    try {
+      el.muted = true;
+      if (!el.src) el.src = BASE + FIRST + ASSET_V;
+      const q = el.play();
+      const fin2 = () => {
+        if (!speaking) { try { el.pause(); el.currentTime = 0; } catch {} }
+        el.muted = false;
+      };
+      if (q && q.then) q.then(fin2).catch(() => { el.muted = false; unlocked = false; });
+      else fin2();
+    } catch { el.muted = false; }
   }
   if (typeof ensureAudio === 'function') {
     const origEnsure = ensureAudio;
@@ -1171,22 +1188,23 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
 
     const my = ++speakToken;
     try { speechSynthesis.cancel(); } catch {}
+    speaking = true;
     voiceDuck(true);
     return new Promise(res => {
       let i = 0, settled = false, guard = 0;
       const done = () => {
         if (settled || my !== speakToken) return;
-        settled = true; clearTimeout(guard); voiceDuck(false); res();
+        settled = true; clearTimeout(guard); speaking = false; voiceDuck(false); res();
       };
       // 保険：さいあく 再生が 止まっても かならず ダッキングを もどす。
       // もどし わすれると BGM が しぼられた ままに なる。
       guard = setTimeout(() => {
         if (settled) return;
-        settled = true; voiceDuck(false); res();
+        settled = true; speaking = false; voiceDuck(false); res();
       }, 2500 + files.length * 3500);
       const fallback = () => {                       // 再生に 失敗したら 合成音声へ
         if (settled || my !== speakToken) return;
-        settled = true; clearTimeout(guard); voiceDuck(false);
+        settled = true; clearTimeout(guard); speaking = false; voiceDuck(false);
         origSeq(parts.slice(i)).then(res);
       };
       const next = () => {
