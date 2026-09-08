@@ -348,7 +348,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsufqs8';
+const ASSET_V = '?v=mtsufvxn';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -600,11 +600,11 @@ const SONGS = [
     69,0,69,0, 68,0,69,0, 72,0,0,0, 71,0,0,0,  68,0,68,0, 67,0,68,0, 71,0,0,0, 70,0,0,0,
     67,0,67,0, 70,0,67,0, 74,0,0,0, 72,0,0,0,  66,0,0,0, 69,0,0,0, 72,0,0,0, 75,0,0,0 ] },
   // 'vehicle' … ビークルに のって いる 10秒だけ 鳴る。はやくて あかるい。
-  { name:'vehicle', bpm:186, lead:'square', vol:0.10, drums:'drive', roots:[48,55,57,53], mel:[
+  { name:'vehicle', bpm:212, lead:'square', vol:0.10, drums:'drive', roots:[48,55,57,53], mel:[
     72,76,79,76, 84,0,79,0,  71,74,79,74, 83,0,79,0,  69,72,76,72, 81,0,76,0,  72,77,81,77, 84,0,86,0,
     88,84,79,84, 88,0,91,0,  86,83,79,83, 86,0,90,0,  84,81,76,81, 88,0,84,0,  86,0,84,0, 81,0,79,0 ] },
   // 'boss' … 各ステージの 大ボス戦。
-  { name:'boss', bpm:156, lead:'sawtooth', vol:0.05, drums:'drive', roots:[45,41,43,40], mel:[
+  { name:'boss', bpm:150, lead:'sawtooth', vol:0.05, drums:'drive', roots:[45,41,43,40], mel:[
     69,0,69,0, 72,0,0,0, 76,0,0,0, 72,0,0,0,  65,0,65,0, 69,0,0,0, 72,0,0,0, 69,0,0,0,
     67,0,67,0, 71,0,0,0, 74,0,0,0, 71,0,0,0,  64,0,0,0, 67,0,0,0, 71,0,0,0, 72,0,0,0 ] },
   // 'clear' … ステージクリア画面の ファンファーレ。
