@@ -67,11 +67,7 @@
   #go{ position:absolute; left:50%; bottom:18px; transform:translateX(-50%); font-size:22px; padding:12px 30px; white-space:nowrap; border-radius:50px; }
   #meTag{ position:absolute; left:14px; top:12px; max-width:300px; background:rgba(255,255,255,.92); border-radius:26px; padding:5px 16px 5px 6px; font-size:15px; font-weight:900; display:flex; align-items:center; gap:8px; color:#33363d; box-shadow:0 3px 0 rgba(0,0,0,.15); z-index:2; }
   #meTag span{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  #bank{ z-index:2; }
   #meTag canvas{ width:52px; height:52px; border-radius:0; }
-  #bank{ position:absolute; right:76px; top:14px; width:216px; overflow:hidden; background:rgba(255,255,255,.92); border-radius:26px; padding:7px 16px; font-size:16px; font-weight:900; box-shadow:0 3px 0 rgba(0,0,0,.15); white-space:nowrap; }
-  #bank .bar{ display:block; width:184px; height:9px; background:#e0e4ea; border-radius:6px; margin-top:4px; overflow:hidden; }
-  #bank .bar i{ display:block; height:100%; background:linear-gradient(90deg,#ffd54f,#ff8f00); }
   #gear{ position:absolute; right:14px; top:14px; width:50px; height:50px; border-radius:50%; border:0; background:rgba(255,255,255,.9); font-size:24px; cursor:pointer; box-shadow:0 3px 0 rgba(0,0,0,.15); }
   /* ── せってい ── */
   #settings{ background:rgba(10,40,70,.55); }
@@ -339,7 +335,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsq43g9';
+const ASSET_V = '?v=mtsq4boc';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
