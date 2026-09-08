@@ -340,7 +340,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsnvv0u';
+const ASSET_V = '?v=mtso09dp';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -559,7 +559,7 @@ const SONGS = [
   // 'patrol' … オープニング用の オリジナル行進曲。
   // I-IV-V-I の 王道進行に 付点リズムを のせた ヒロイックな マーチ。
   // 既存曲と 同じ 合成エンジンで 鳴らすので 追加容量は ゼロ。
-  { name:'patrol', bpm:152, lead:'square', vol:0.055, drums:'march', roots:[48,53,55,48], mel:[
+  { name:'patrol', bpm:152, lead:'square', vol:0.10, drums:'march', roots:[48,53,55,48], mel:[
     72,0,72,0, 76,0,79,0, 84,0,0,0, 79,0,0,0,  77,0,77,0, 81,0,84,0, 86,0,0,0, 84,0,0,0,
     79,0,79,0, 83,0,86,0, 88,0,86,0, 83,0,0,0,  84,0,0,79, 0,76,0,72, 74,0,76,0, 72,0,0,0 ] },
   // 'lastboss' … ラスボス／うらボス せんよう。
@@ -678,7 +678,7 @@ function stopBgm() {
 function playSong(i) { if (songIdx === i && bgm.on) return; const was = bgm.on; stopBgm(); songIdx = i; if ((was || soundOn) && audioCtx && soundOn) startBgm(); }
 // ── ダッキング：画面ごとの きほん音量 × よみあげ中の 減衰 ──
 const SPEAK_DUCK = 0.26;
-let duckBase = 0.55, speakDuck = false;
+let duckBase = 0.78, speakDuck = false;   // BGMが 小さすぎて 聞こえなかった ため 引き上げ
 function applyDuck() {
   if (bgm.on && audioCtx) bgm.gain.gain.setTargetAtTime(duckBase * (speakDuck ? SPEAK_DUCK : 1), audioCtx.currentTime, 0.1);
 }
@@ -946,13 +946,6 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
       }
     }
 
-    // ── サイレンの てんめつ ──
-    if (t > 2.0 || launching) {
-      const s = launching ? 1 : 0.5;
-      c.globalAlpha = (Math.sin(t * 7) > 0 ? .14 : .05) * s;
-      c.fillStyle = Math.sin(t * 7) > 0 ? '#ff1744' : '#2979ff';
-      c.fillRect(0, 0, 960, 540); c.globalAlpha = 1;
-    }
 
     // ── タイトル ──
     const tp = Math.min(1, Math.max(0, (t - 2.1) / 0.7));
