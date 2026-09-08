@@ -144,7 +144,12 @@
   #over{ background:rgba(20,40,60,.8); color:#fff; }
   #over h2{ font-size:40px; margin:0 0 6px; text-shadow:0 3px 0 rgba(0,0,0,.4); }
   #over p{ font-size:20px; margin:0 0 18px; line-height:1.6; }
-  #ending{ background:radial-gradient(ellipse at 50% 30%, #ffd54f, #ff8f00 55%, #0277bd); color:#fff; border-radius:14px; }
+  #ending{ background:#08122c; color:#fff; border-radius:14px; padding:0; }
+  #ending canvas{ position:absolute; inset:0; width:960px; height:540px; border-radius:14px; }
+  #endCard{ position:relative; z-index:2; display:flex; flex-direction:column; align-items:center;
+            background:radial-gradient(ellipse at 50% 35%, rgba(255,213,79,.96), rgba(255,143,0,.94) 55%, rgba(2,119,189,.94));
+            padding:26px 40px; border-radius:20px; box-shadow:0 12px 40px rgba(0,0,0,.45); }
+  #endCard.hidden{ display:none; }
   #ending h2{ font-size:50px; margin:0 0 8px; text-shadow:0 4px 0 #bf360c, 0 8px 20px rgba(0,0,0,.4); }
   #ending p{ font-size:22px; margin:0 0 16px; font-weight:800; text-shadow:0 2px 0 rgba(0,0,0,.3); }
   #intro{ z-index:60; background:#0b1020; padding:0; }
@@ -249,10 +254,13 @@
   </div>
 
   <div id="ending" class="overlay hidden">
-    <h2>🏆 ぜんぶ クリア！ 🏆</h2>
-    <p id="endTxt">きみは ことばパトロールの ヒーローだ！</p>
-    <div class="row">
-      <button class="bigbtn alt" id="btnHome3">🗺️ マップへ</button>
+    <canvas id="endCv" width="960" height="540"></canvas>
+    <div id="endCard" class="hidden">
+      <h2>🏆 ぜんぶ クリア！ 🏆</h2>
+      <p id="endTxt">きみは ことばパトロールの ヒーローだ！</p>
+      <div class="row">
+        <button class="bigbtn alt" id="btnHome3">🗺️ マップへ</button>
+      </div>
     </div>
   </div>
 
@@ -336,7 +344,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsqyupy';
+const ASSET_V = '?v=mtsr140d';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -1448,6 +1456,7 @@ function show(s) {
   clearEl.classList.toggle('hidden', s !== 'clear');
   overEl.classList.toggle('hidden', s !== 'over');
   endEl.classList.toggle('hidden', s !== 'end');
+  if (s === 'end') startEndMovie(); else stopEndMovie();     // 🎬 エンディング映像
   if (s === 'menu') { cancelSpeak(); buildMap(); playSong(MAP_SONG); }
   if (s === 'end' && END_SONG >= 0) playSong(END_SONG);   // エンディングは せんようの 曲
   if (audioCtx) duckBgm(s === 'card' ? 0.12 : s === 'rankup' ? 0.18 : s === 'drive' ? 0.3 : 0.55);
@@ -3369,6 +3378,193 @@ function drawDrive() {
   const sub = driveTo.allPups ? 'たんとう：パウ・パトロール ぜんいん！' : `たんとう：${pup.ja}（${SKILL[pup.skill].ja}）`;
   ctx.strokeText(sub, W / 2, 102); ctx.fillStyle = '#0277bd'; ctx.fillText(sub, W / 2, 102);
   if (driveT > 1.2) { ctx.globalAlpha = 0.6; ctx.font = `800 16px ${fam}`; ctx.fillStyle = '#37474f'; ctx.fillText('タップで スキップ', W / 2, H - 28); ctx.globalAlpha = 1; }
+}
+// ═════════ 🎬 エンディング映像 / ending movie ═════════
+// クリアした ごほうび。タップで いつでも とばせる。
+//   0.0- 5.0  よあけ（夜 → あさやけ）／まちに へいわが もどる
+//   5.0-10.5  6ぴきが かけつけて ならぶ
+//  10.5-15.0  おいわい（花火・紙ふぶき・ジャンプ）
+//  15.0-20.5  たすけた ばしょが 下から ながれる（スタッフロール風）
+//  20.5-26.0  タイトル と せいせき
+const END_MOVIE_DUR = 26.0;
+let endRaf = 0, endT0 = 0, endConf = [], endFw = [], endSkip = false;
+function stopEndMovie() { if (endRaf) cancelAnimationFrame(endRaf); endRaf = 0; }
+function startEndMovie() {
+  const cv = $('endCv'); if (!cv) return;
+  const c = cv.getContext('2d');
+  const card = $('endCard');
+  card.classList.add('hidden');
+  endT0 = performance.now(); endSkip = false;
+  endConf = []; endFw = [];
+  const COLS = ['#ff5252','#ffd54f','#4fc3f7','#81c784','#ba68c8','#ffb74d','#fff'];
+  for (let i = 0; i < 90; i++) endConf.push({ x: Math.random() * 960, y: -Math.random() * 700,
+    w: 7 + Math.random() * 9, h: 10 + Math.random() * 12, v: 70 + Math.random() * 130,
+    sp: 1.4 + Math.random() * 3.4, ph: Math.random() * 6.28, col: COLS[i % COLS.length] });
+  const ease = k => k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+  const fam = '"Hiragino Sans","Noto Sans JP",sans-serif';
+
+  function finish() {
+    stopEndMovie();
+    card.classList.remove('hidden');
+  }
+  function skip(e) { if (e) e.preventDefault(); if (endRaf) { endSkip = true; finish(); } }
+  cv.onpointerdown = skip;
+
+  function line(txt, x, y, size, fill, stroke, alpha) {
+    c.save(); c.globalAlpha = alpha; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = `900 ${size}px ${fam}`; c.lineWidth = Math.max(6, size * 0.16); c.lineJoin = 'round';
+    c.strokeStyle = stroke; c.strokeText(txt, x, y);
+    c.fillStyle = fill; c.fillText(txt, x, y); c.restore();
+  }
+  function skyline(y, col, off, h, step) {
+    c.fillStyle = col;
+    for (let i = -2; i < 14; i++) {
+      const bx = ((i * 84 - off % 84) + 1200) % 1200 - 120;
+      const bh = h + ((i * step) % 5) * 16;
+      c.fillRect(bx, y - bh, 62, bh + 90);
+    }
+  }
+
+  function frame(ts) {
+    const t = Math.min(END_MOVIE_DUR, (ts - endT0) / 1000);
+
+    // ── そら（夜 → あさやけ）──
+    const dawn = Math.min(1, t / 4.2);
+    const g = c.createLinearGradient(0, 0, 0, 540);
+    const mix = (a, b, k) => a.map((v, i) => Math.round(v + (b[i] - v) * k));
+    const top = mix([9, 16, 46], [255, 138, 101], dawn), bot = mix([26, 35, 78], [255, 224, 130], dawn);
+    g.addColorStop(0, `rgb(${top.join(',')})`); g.addColorStop(1, `rgb(${bot.join(',')})`);
+    c.fillStyle = g; c.fillRect(0, 0, 960, 540);
+    // ほし（あさに なると きえる）
+    c.fillStyle = `rgba(255,255,255,${0.85 * (1 - dawn)})`;
+    for (let i = 0; i < 60; i++) {
+      const sx = (i * 137) % 960, sy = (i * 71) % 300;
+      c.beginPath(); c.arc(sx, sy, 1 + (i % 3) * 0.6, 0, 6.29); c.fill();
+    }
+    // たいよう
+    const sy = 560 - 250 * Math.min(1, t / 4.6);
+    c.save();
+    const sg = c.createRadialGradient(480, sy, 10, 480, sy, 260);
+    sg.addColorStop(0, 'rgba(255,241,118,.95)'); sg.addColorStop(1, 'rgba(255,241,118,0)');
+    c.fillStyle = sg; c.fillRect(0, 0, 960, 540);
+    c.fillStyle = '#fff9c4'; c.beginPath(); c.arc(480, sy, 54, 0, 6.29); c.fill();
+    c.restore();
+    // まちなみ
+    skyline(452, `rgba(18,26,58,${0.55 + 0.25 * (1 - dawn)})`, 0, 78, 3);
+    skyline(462, `rgba(10,16,40,${0.75 + 0.2 * (1 - dawn)})`, 40, 96, 7);
+    // うみ と じめん
+    c.fillStyle = `rgba(2,119,189,${0.55 + 0.25 * dawn})`; c.fillRect(0, 452, 960, 24);
+    c.fillStyle = '#2e7d32'; c.fillRect(0, 470, 960, 70);
+    c.fillStyle = '#1b5e20'; c.fillRect(0, 470, 960, 7);
+
+    // ── ばめん A：「へいわが もどった」──
+    if (t > 1.2 && t < 5.0) {
+      const a = Math.min(1, (t - 1.2) / 0.6) * Math.min(1, (5.0 - t) / 0.5);
+      line('アドベンチャーベイに', 480, 120, 34, '#fff', '#0d47a1', a);
+      line('へいわが もどった！', 480, 172, 40, '#ffe082', '#0d47a1', a);
+    }
+
+    // ── ばめん B：なかまが あつまる ──
+    const N = PUPS.length;
+    for (let i = 0; i < N; i++) {
+      const P = PUPS[i], st = 5.0 + i * 0.45;
+      const k = Math.min(1, Math.max(0, (t - st) / 1.25));
+      if (k <= 0) continue;
+      const hx = 150 + i * 132;
+      const x = -110 + (hx + 110) * ease(k);
+      const moving = k < 1;
+      // 10.5秒から みんなで ジャンプ
+      const jm = t > 10.5 ? Math.max(0, Math.sin((t - 10.5) * 4.4 - i * 0.5)) * 54 : 0;
+      const feet = 470 - jm - (moving ? 0 : Math.sin(t * 3 + i) * 3);
+      try { drawPup(c, x, feet, jm > 2, t * 14 + i, 1.2, P, 'normal', moving); }
+      catch { c.font = '54px sans-serif'; c.textAlign = 'center'; c.fillText('🐶', x, feet); }
+      if (!moving) {
+        const a = Math.min(1, (t - st - 1.25) * 2);
+        c.save(); c.globalAlpha = a;
+        c.fillStyle = 'rgba(0,0,0,.5)'; c.beginPath(); c.roundRect(x - 44, feet - 128, 88, 23, 12); c.fill();
+        c.fillStyle = '#fff'; c.font = `900 14px ${fam}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText(P.ja, x, feet - 116); c.restore();
+      }
+    }
+
+    // ── ばめん C：おいわい（花火・紙ふぶき）──
+    if (t > 10.2) {
+      if (Math.random() < 0.045) endFw.push({ x: 100 + Math.random() * 760, y: 90 + Math.random() * 200,
+        t: 0, col: ['#ff8a80','#ffd54f','#80d8ff','#ccff90','#ea80fc'][Math.floor(Math.random() * 5)] });
+      for (let i = endFw.length - 1; i >= 0; i--) {
+        const f = endFw[i]; f.t += 1 / 60;
+        if (f.t > 1.3) { endFw.splice(i, 1); continue; }
+        const r = f.t * 210, a = Math.max(0, 1 - f.t / 1.3);
+        c.save(); c.globalAlpha = a; c.fillStyle = f.col;
+        for (let j = 0; j < 16; j++) {
+          const an = j / 16 * 6.283;
+          c.beginPath(); c.arc(f.x + Math.cos(an) * r, f.y + Math.sin(an) * r * 0.9, 4.5, 0, 6.29); c.fill();
+        }
+        c.restore();
+      }
+      for (const q of endConf) {
+        q.y += q.v / 60; q.ph += q.sp / 60;
+        if (q.y > 560) { q.y = -20; q.x = Math.random() * 960; }
+        c.save(); c.translate(q.x + Math.sin(q.ph) * 26, q.y); c.rotate(q.ph);
+        c.fillStyle = q.col; c.fillRect(-q.w / 2, -q.h / 2, q.w, q.h); c.restore();
+      }
+    }
+    if (t > 11.0 && t < 15.2) {
+      const a = Math.min(1, (t - 11.0) / 0.5) * Math.min(1, (15.2 - t) / 0.5);
+      line('6ぴき ぜんいん、だいかつやく！', 480, 118, 36, '#fff59d', '#bf360c', a);
+    }
+
+    // ── ばめん D：たすけた ばしょ（下から ながれる）──
+    if (t > 15.0 && t < 21.0) {
+      const el = t - 15.0;
+      c.save(); c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.globalAlpha = Math.min(1, el / 0.4) * Math.min(1, (6.0 - el) / 0.6);
+      line('パトロール かんりょう！', 480, 66, 30, '#fff', '#01579b', c.globalAlpha);
+      LOCS.forEach((L, i) => {
+        const y = 560 - el * 78 + i * 56;
+        if (y < 90 || y > 520) return;
+        c.font = `900 26px ${fam}`;
+        c.fillStyle = 'rgba(0,0,0,.42)';
+        c.beginPath(); c.roundRect(240, y - 22, 480, 44, 22); c.fill();
+        c.fillStyle = '#fff';
+        c.fillText(`${L.icon} ${L.ja}　✅`, 480, y);
+      });
+      c.restore();
+    }
+
+    // ── ばめん E：タイトル と せいせき ──
+    if (t > 20.6) {
+      const tp = Math.min(1, (t - 20.6) / 0.8);
+      const bounce = tp < 1 ? -Math.cos(tp * Math.PI) * 26 * (1 - tp) : 0;
+      const y = 150 + (1 - ease(tp)) * -150 + bounce;
+      c.save(); c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.font = `900 58px ${fam}`; c.lineWidth = 12; c.lineJoin = 'round';
+      c.strokeStyle = '#0d47a1'; c.strokeText('ことばパトロール', 480, y);
+      const tg = c.createLinearGradient(0, y - 44, 0, y + 14);
+      tg.addColorStop(0, '#fff9c4'); tg.addColorStop(1, '#ffca28');
+      c.fillStyle = tg; c.fillText('ことばパトロール', 480, y);
+      c.restore();
+      if (t > 21.6) {
+        const a = Math.min(1, (t - 21.6) / 0.5);
+        line('🏆 ぜんぶ クリア！ 🏆', 480, 232, 40, '#fff', '#bf360c', a);
+        line(`🎖️ ${RANKS[Math.min(rank, MAX_LV)]}　🪙 ${progress.earned}まい`, 480, 292, 30, '#e1f5fe', '#01579b', a);
+      }
+      if (t > 23.4) {
+        const a = Math.min(1, (t - 23.4) / 0.5);
+        line('また あそぼうね！ 🐾', 480, 352, 34, '#ffe082', '#4e342e', a);
+      }
+    }
+
+    if (t > 2.0) {
+      c.save(); c.globalAlpha = 0.55; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.font = `900 15px ${fam}`; c.fillStyle = '#fff';
+      c.fillText('タップで スキップ', 480, 522); c.restore();
+    }
+
+    if (t >= END_MOVIE_DUR) { finish(); return; }
+    endRaf = requestAnimationFrame(frame);
+  }
+  endRaf = requestAnimationFrame(frame);
 }
 // ═════════ ループ / loop ═════════
 function frame(ts) {
