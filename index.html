@@ -348,7 +348,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsvd6zz';
+const ASSET_V = '?v=mtsvevm2';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -3542,9 +3542,10 @@ let endRaf = 0, endT0 = 0, endConf = [], endFw = [], endSkip = false;
 let endClock = 0, endPrev = 0;   // 経過時間は コマの 差を ためて つくる
 function stopEndMovie() { if (endRaf) cancelAnimationFrame(endRaf); endRaf = 0; }
 function startEndMovie() {
-  const cv = $('endCv'); if (!cv) return;
-  const c = cv.getContext('2d');
   const card = $('endCard');
+  const cv = $('endCv');
+  if (!cv || !cv.getContext) { card.classList.remove('hidden'); return; }   // 映像なしでも 先へ
+  const c = cv.getContext('2d');
   card.classList.add('hidden');
   endT0 = performance.now(); endSkip = false;
   endClock = 0; endPrev = 0;
@@ -3720,9 +3721,11 @@ function startEndMovie() {
     }
 
     if (t >= END_MOVIE_DUR) { finish(); return; }
-    endRaf = requestAnimationFrame(frame);
+    endRaf = requestAnimationFrame(guarded);
   }
-  endRaf = requestAnimationFrame(frame);
+  // 途中で えらーが 出ても カードは かならず 出す
+  const guarded = ts => { try { frame(ts); } catch (e) { finish(); } };
+  endRaf = requestAnimationFrame(guarded);
 }
 // ═════════ ループ / loop ═════════
 function frame(ts) {
