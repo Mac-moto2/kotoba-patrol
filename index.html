@@ -348,7 +348,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsrvsaq';
+const ASSET_V = '?v=mtssl64z';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -598,12 +598,22 @@ const SONGS = [
   // 'trueboss' … うらボス せんよう。半音ずつ 下がる 悪役の 進行。
   { name:'trueboss', bpm:172, lead:'sawtooth', vol:0.045, drums:'heavy', roots:[45,44,43,42], mel:[
     69,0,69,0, 68,0,69,0, 72,0,0,0, 71,0,0,0,  68,0,68,0, 67,0,68,0, 71,0,0,0, 70,0,0,0,
-    67,0,67,0, 70,0,67,0, 74,0,0,0, 72,0,0,0,  66,0,0,0, 69,0,0,0, 72,0,0,0, 75,0,0,0 ] }
+    67,0,67,0, 70,0,67,0, 74,0,0,0, 72,0,0,0,  66,0,0,0, 69,0,0,0, 72,0,0,0, 75,0,0,0 ] },
+  // 'vehicle' … ビークルに のって いる 10秒だけ 鳴る。はやくて あかるい。
+  { name:'vehicle', bpm:186, lead:'square', vol:0.10, drums:'drive', roots:[48,55,57,53], mel:[
+    72,76,79,76, 84,0,79,0,  71,74,79,74, 83,0,79,0,  69,72,76,72, 81,0,76,0,  72,77,81,77, 84,0,86,0,
+    88,84,79,84, 88,0,91,0,  86,83,79,83, 86,0,90,0,  84,81,76,81, 88,0,84,0,  86,0,84,0, 81,0,79,0 ] },
+  // 'clear' … ステージクリア画面の ファンファーレ。
+  { name:'clear', bpm:128, lead:'square', vol:0.15, drums:'march', roots:[53,48,55,48], mel:[
+    84,0,84,0, 84,0,0,0, 89,0,0,0, 0,0,0,0,  88,0,88,0, 88,0,0,0, 91,0,0,0, 0,0,0,0,
+    86,0,86,0, 86,0,0,0, 90,0,0,0, 0,0,0,0,  88,0,0,0, 0,0,0,0, 84,0,0,0, 79,0,0,0 ] }
 ];
 const MAP_SONG = 0;
 const PATROL_SONG = SONGS.findIndex(x => x.name === 'patrol');
 const BOSS_SONG = SONGS.findIndex(x => x.name === 'lastboss');
 const TRUE_SONG = SONGS.findIndex(x => x.name === 'trueboss');   // うらボス せんよう
+const VEH_SONG  = SONGS.findIndex(x => x.name === 'vehicle');    // 🚗 のって いる あいだ
+const CLEAR_SONG = SONGS.findIndex(x => x.name === 'clear');     // 🎉 クリア画面
 const END_SONG = SONGS.findIndex(x => x.name === 'ending');
 const bgm = { on:false, step:0, next:0, timer:0, gain:null, pad:null, stepLen:0.1 };
 let songIdx = MAP_SONG;
@@ -1472,7 +1482,8 @@ function show(s) {
   endEl.classList.toggle('hidden', s !== 'end');
   if (s === 'end') startEndMovie(); else stopEndMovie();     // 🎬 エンディング映像
   if (s === 'menu') { cancelSpeak(); buildMap(); playSong(MAP_SONG); }
-  if (s === 'end' && END_SONG >= 0) playSong(END_SONG);   // エンディングは せんようの 曲
+  if (s === 'end' && END_SONG >= 0) playSong(END_SONG);       // エンディングは せんようの 曲
+  if (s === 'clear' && CLEAR_SONG >= 0) playSong(CLEAR_SONG); // 🎉 クリアの ファンファーレ
   if (audioCtx) duckBgm(s === 'card' ? 0.12 : s === 'rankup' ? 0.18 : s === 'drive' ? 0.3 : 0.55);
 }
 function updateHud() {
@@ -1723,6 +1734,7 @@ function useVehicle() {
   sfx.engine(); sfx.siren();
   floats.push({ text: `🚗 ${pup.ja}の ビークル とうじょう！ 10びょう むてき！`, x: player.x + 50, y: player.y - 150, life: 2.4, color: pup.uni });
   floats.push({ text: `🪙 -${UNLOCK_CAR}（のこり ${progress.coins}）`, x: player.x + 50, y: player.y - 110, life: 2.0, color: '#ff8f00' });
+  if (VEH_SONG >= 0) playSong(VEH_SONG);         // 🚗 のって いる あいだの 曲
   updateHud();
   0;
 }
@@ -2335,7 +2347,16 @@ function update(dt) {
   if (hammerT > 0) hammerT = Math.max(0, hammerT - dt);
   if (screwT > 0) { screwT -= dt; if (screwT <= 0) screwT = 0; updateHud(); }
   if (loc.autoSwap) autoSwap(dt);
-  if (vehT > 0) { vehT -= dt; if (vehT <= 0) { vehT = 0; floats.push({ text: '🚗 ビークル しゅうりょう！', x: player.x + 40, y: player.y - 90, life: 1.4, color: '#455a64' }); } }
+  if (vehT > 0) {
+    vehT -= dt;
+    if (vehT <= 0) {
+      vehT = 0;
+      floats.push({ text: '🚗 ビークル しゅうりょう！', x: player.x + 40, y: player.y - 90, life: 1.4, color: '#455a64' });
+      // 曲を もどす。ボスと たたかって いる さいちゅうなら ボスの 曲へ。
+      const back = inArena() ? (boss.big ? TRUE_SONG : BOSS_SONG) : loc.song;
+      try { playSong(back >= 0 ? back : loc.song); } catch {}
+    }
+  }
   if (flyT > 0) { flyT -= dt; if (flyT <= 0) { flyT = 0; floats.push({ text: '🚁 ちゃくりく！', x: player.x + 40, y: player.y - 90, life: 1.4, color: '#0277bd' }); } updateHud(); }
   if (swimT > 0) { swimT -= dt; if (swimT <= 0) swimT = 0; updateHud(); }
   if (searchT > 0) { searchT -= dt; if (searchT <= 0) searchT = 0; updateHud(); }
