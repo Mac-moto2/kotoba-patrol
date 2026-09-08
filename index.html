@@ -348,7 +348,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsvhwsw';
+const ASSET_V = '?v=mtsviwpk';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -770,7 +770,10 @@ function playSong(i) { if (songIdx === i && bgm.on) return; const was = bgm.on; 
     if (!FILES[i]) return false;
     const src = BASE + FILES[i] + (typeof ASSET_V === 'string' ? ASSET_V : '');
     if (!el.src.endsWith(FILES[i]) || el.paused) {
+      // src が おなじ ままだと 止めた ところから 再開して しまう。
+      // 曲を かけはじめる ときは かならず 先頭から。
       if (!el.src.includes(FILES[i])) el.src = src;
+      else if (el.paused && el.currentTime > 0.2) { try { el.currentTime = 0; } catch {} }
       el.loop = !NO_LOOP.includes(FILES[i]);
       applyVol();
       const p = el.play();
@@ -1154,9 +1157,11 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
     if (launching) { if (!done) { done = true; finish(); } return; }   // 2回目の タップで スキップ
     // iOS は この タップの 中で 音を 解錠する 必要が ある。
     // ensureAudio() が startBgm() を 呼ぶので、その前に 曲を 決める。
+    // ★ さきに 曲を きめて から 解錠する。
+    //   ensureAudio() は そのとき の songIdx を 鳴らしはじめる ので、
+    //   ここで きめて おかないと マップの 曲が 一瞬 鳴って しまう。
+    try { if (typeof PATROL_SONG === 'number' && PATROL_SONG >= 0) songIdx = PATROL_SONG; } catch {}
     try { ensureAudio(); } catch {}
-    // playSong は いま鳴っている曲を 止めてから かけ直すので、
-    // 先に BGM が 始まって いても かくじつに 行進曲へ 切りかわる。
     try { if (typeof PATROL_SONG === 'number' && PATROL_SONG >= 0) playSong(PATROL_SONG); } catch {}
     try { sfx.siren(); setTimeout(() => { try { sfx.siren(); } catch {} }, 900); } catch {}
     // ここで セリフを しゃべらせない。
