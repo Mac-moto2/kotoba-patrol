@@ -348,7 +348,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtstpf1g';
+const ASSET_V = '?v=mtsu8usa';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -1516,6 +1516,10 @@ function startStage(i) {
   buildSwap();
   playSong(loc.song); show('play'); updateHud();
   sfx.siren();
+  // 🔊 出動の かけ声。タップの ながれの 中で よぶ こと（iOS の 解錠が きれない ように）。
+  //   名前と「、しゅつどう！」は べつべつに 録音して あるので つなげて 鳴らす。
+  const cryPup = loc.allPups ? PUPS[0] : (pupById(loc.pup) || PUPS[0]);
+  speakSeq([[cryPup.ja, 'ja'], ['、しゅつどう！', 'ja']]);
 }
 function show(s) {
   state = s;
@@ -1562,6 +1566,8 @@ function pupCanvas(P, cssSize, sc) {
   return cv;
 }
 let briefIdx = 0;
+// ※ いまは どこからも よばれて いない（マップからも ボタンからも startStage に 直行）。
+//    かけ声は startStage() 側に 移した。
 function showBrief(i) {
   briefIdx = i; const L = LOCS[i];
   $('briefTitle').textContent = `${L.icon} ミッション ${i + 1}　${L.ja}`;
