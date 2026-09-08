@@ -348,7 +348,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtstczej';
+const ASSET_V = '?v=mtstg5mo';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -717,7 +717,7 @@ function startBgm() {
 function stopBgm() {
   if (!bgm.on) return; clearInterval(bgm.timer); bgm.on = false;
   try { bgm.pad.disconnect(); } catch {}
-  try { bgm.gain.disconnect(); } catch {}
+  try { if (bgm.gain) bgm.gain.disconnect(); } catch {}
 }
 function playSong(i) { if (songIdx === i && bgm.on) return; const was = bgm.on; stopBgm(); songIdx = i; if ((was || soundOn) && audioCtx && soundOn) startBgm(); }
 // ═══ BGM-PACK BEGIN ═══
@@ -835,7 +835,8 @@ let duckBase = 1.35, speakDuck = false;
 //   マスターの コンプレッサー（threshold -15dB, ratio 3.2）が 山を おさえるので
 //   1 を こえても 割れない。
 function applyDuck() {
-  if (bgm.on && audioCtx) bgm.gain.gain.setTargetAtTime(duckBase * (speakDuck ? SPEAK_DUCK : 1), audioCtx.currentTime, 0.1);
+  // bgm.gain は 合成BGM の ときだけ ある。mp3 再生中は null なので かならず 確かめる。
+  if (bgm.on && audioCtx && bgm.gain) bgm.gain.gain.setTargetAtTime(duckBase * (speakDuck ? SPEAK_DUCK : 1), audioCtx.currentTime, 0.1);
 }
 function duckBgm(v) { duckBase = v; applyDuck(); }
 function voiceDuck(on) { if (speakDuck === on) return; speakDuck = on; applyDuck(); }
