@@ -340,7 +340,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsp0pf1';
+const ASSET_V = '?v=mtspdzxg';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -566,11 +566,17 @@ const SONGS = [
   // 短調（Am-F-G-Em）で 半音の うごきを 入れ、緊迫感を だす。
   { name:'lastboss', bpm:168, lead:'sawtooth', vol:0.042, drums:'heavy', roots:[45,41,43,40], mel:[
     69,0,69,0, 72,0,76,0, 75,0,76,0, 72,0,69,0,  65,0,65,0, 68,0,72,0, 71,0,72,0, 68,0,65,0,
-    67,0,67,0, 71,0,74,0, 73,0,74,0, 71,0,67,0,  76,0,75,0, 74,0,72,0, 71,0,69,0, 68,0,0,0 ] }
+    67,0,67,0, 71,0,74,0, 73,0,74,0, 71,0,67,0,  76,0,75,0, 74,0,72,0, 71,0,69,0, 68,0,0,0 ] },
+  // 'ending' … エンディング せんよう。ふだんは mp3 を 鳴らすので
+  // この 音符データは mp3 が 読めない ときの ひかえ。
+  { name:'ending', bpm:150, lead:'square', vol:0.16, drums:'march', roots:[48,53,55,48], mel:[
+    72,0,72,0, 76,0,79,0, 84,0,0,0, 79,0,0,0,  77,0,77,0, 81,0,84,0, 86,0,0,0, 84,0,0,0,
+    79,0,79,0, 83,0,86,0, 88,0,86,0, 83,0,0,0,  84,0,0,79, 0,76,0,72, 74,0,76,0, 72,0,0,0 ] }
 ];
 const MAP_SONG = 0;
 const PATROL_SONG = SONGS.findIndex(x => x.name === 'patrol');
 const BOSS_SONG = SONGS.findIndex(x => x.name === 'lastboss');
+const END_SONG = SONGS.findIndex(x => x.name === 'ending');
 const bgm = { on:false, step:0, next:0, timer:0, gain:null, pad:null, stepLen:0.1 };
 let songIdx = MAP_SONG;
 const midi = m => 440 * Math.pow(2, (m - 69) / 12);
@@ -682,7 +688,7 @@ function playSong(i) { if (songIdx === i && bgm.on) return; const was = bgm.on; 
 (function () {
   if (typeof Audio === 'undefined') return;          // headless では 何も しない
 
-  const FILES = ["bay.mp3","beach.mp3","farm.mp3","mount.mp3","snow.mp3","jungle.mp3","city.mp3","patrol.mp3","lastboss.mp3"];
+  const FILES = ["bay.mp3","beach.mp3","farm.mp3","mount.mp3","snow.mp3","jungle.mp3","city.mp3","patrol.mp3","lastboss.mp3","ending.mp3"];
   const BASE = 'bgm/';
   const VOL = 0.55;                                  // ふだんの 音量
   const DUCK = 0.26;                                 // しゃべって いる あいだ
@@ -703,8 +709,14 @@ function playSong(i) { if (songIdx === i && bgm.on) return; const was = bgm.on; 
     try { if (bgm && !bgm.on && soundOn && audioCtx) origStart(); } catch {}
   });
 
+  const NO_LOOP = ['ending.mp3'];      // フェードアウトで おわる 曲は くりかえさない
+
   function applyVol() {
-    el.volume = (soundOn ? VOL : 0) * (speakDuck ? DUCK : 1);
+    // duckBgm() で 場面ごとに さがる ぶんも 反映する
+    //（クイズ中 0.12 / ランクアップ 0.18 / 移動 0.3 / ふだん 0.55）
+    let scale = 1;
+    try { scale = Math.min(1, (typeof duckBase === 'number' ? duckBase : 0.55) / 0.55); } catch {}
+    el.volume = (soundOn ? VOL : 0) * scale * (speakDuck ? DUCK : 1);
   }
 
   function playFile(i) {
@@ -712,6 +724,7 @@ function playSong(i) { if (songIdx === i && bgm.on) return; const was = bgm.on; 
     const src = BASE + FILES[i] + (typeof ASSET_V === 'string' ? ASSET_V : '');
     if (!el.src.endsWith(FILES[i]) || el.paused) {
       if (!el.src.includes(FILES[i])) el.src = src;
+      el.loop = !NO_LOOP.includes(FILES[i]);
       applyVol();
       const p = el.play();
       if (p && p.catch) p.catch(() => { started = false; });   // 操作前は 拒否される
@@ -751,6 +764,7 @@ function playSong(i) { if (songIdx === i && bgm.on) return; const was = bgm.on; 
     wantIdx = i;
     try { el.pause(); } catch {}
     el.src = BASE + (FILES[i] || FILES[0]) + (typeof ASSET_V === 'string' ? ASSET_V : '');
+    el.loop = !NO_LOOP.includes(FILES[i]);
     if (started && soundOn) { bgm.on = true; playFile(i); }
   };
 
@@ -1404,6 +1418,7 @@ function show(s) {
   overEl.classList.toggle('hidden', s !== 'over');
   endEl.classList.toggle('hidden', s !== 'end');
   if (s === 'menu') { cancelSpeak(); buildMap(); playSong(MAP_SONG); }
+  if (s === 'end' && END_SONG >= 0) playSong(END_SONG);   // エンディングは せんようの 曲
   if (audioCtx) duckBgm(s === 'card' ? 0.12 : s === 'rankup' ? 0.18 : s === 'drive' ? 0.3 : 0.55);
 }
 function updateHud() {
