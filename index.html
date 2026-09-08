@@ -348,7 +348,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsso10n';
+const ASSET_V = '?v=mtssv7bo';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -605,8 +605,8 @@ const SONGS = [
     88,84,79,84, 88,0,91,0,  86,83,79,83, 86,0,90,0,  84,81,76,81, 88,0,84,0,  86,0,84,0, 81,0,79,0 ] },
   // 'clear' … ステージクリア画面の ファンファーレ。
   { name:'clear', bpm:128, lead:'square', vol:0.15, drums:'march', roots:[53,48,55,48], mel:[
-    84,0,84,0, 84,0,0,0, 89,0,0,0, 0,0,0,0,  88,0,88,0, 88,0,0,0, 91,0,0,0, 0,0,0,0,
-    86,0,86,0, 86,0,0,0, 90,0,0,0, 0,0,0,0,  88,0,0,0, 0,0,0,0, 84,0,0,0, 79,0,0,0 ] }
+    77,0,77,0, 77,0,0,0, 82,0,0,0, 0,0,0,0,  81,0,81,0, 81,0,0,0, 84,0,0,0, 0,0,0,0,
+    79,0,79,0, 79,0,0,0, 83,0,0,0, 0,0,0,0,  81,0,0,0, 0,0,0,0, 77,0,0,0, 72,0,0,0 ] }
 ];
 const MAP_SONG = 0;
 const PATROL_SONG = SONGS.findIndex(x => x.name === 'patrol');
