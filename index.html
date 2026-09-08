@@ -340,7 +340,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtspmrty';
+const ASSET_V = '?v=mtspn692';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -1496,7 +1496,10 @@ function buildMap() {
     <path d="${path}" fill="none" stroke="#78909c" stroke-width="4" stroke-dasharray="10 14" stroke-linecap="round"/></svg>`;
   LOCS.forEach((p, i) => {
     const b = document.createElement('button');
-    const cleared = !!progress.cleared[p.id], cur = i === progress.unlocked, locked = i > progress.unlocked;
+    // 全部 クリア済みなら「つぎ」は 1面（もういちど パトロール）なので
+    // 現在地マーカーが どこにも 出ない のを ふせぐ
+    const nextI = progress.unlocked >= LOCS.length ? 0 : progress.unlocked;
+    const cleared = !!progress.cleared[p.id], cur = i === nextI, locked = i > progress.unlocked;
     b.className = 'pl' + (locked ? ' locked' : cur ? ' current' : '');
     b.style.left = pts[i].x + 'px'; b.style.top = pts[i].y + 'px';
     b.innerHTML = `<div class="ic">${p.icon}</div><div class="nm">${p.ja}</div>
