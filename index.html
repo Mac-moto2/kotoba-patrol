@@ -348,7 +348,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsti1jm';
+const ASSET_V = '?v=mtsti6o8';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -1286,6 +1286,7 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
         if (pr && pr.catch) pr.catch(toSynth);
       };
       const nextWA = () => {
+        try{console.log("WA-STEP settled="+settled+" my="+my+" tok="+speakToken+" i="+i);}catch{}
         if (settled || my !== speakToken) return finish();
         if (i >= files.length) return finish();
         loadBuf(BASE + files[i] + AV()).then(buf => {
@@ -1297,7 +1298,7 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
           n.onended = () => { waNode = null; i++; setTimeout(nextWA, 100); };
           waNode = n;
           n.start();
-        }).catch(() => nextEl());                    // 読めなければ 要素の 道へ
+        }).catch(e => { try{console.log("WA-ERR", e && (e.stack||e.message||e));}catch{} nextEl(); });                    // 読めなければ 要素の 道へ
       };
 
       if (canWA()) nextWA(); else nextEl();
