@@ -340,7 +340,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsmvy4t';
+const ASSET_V = '?v=mtsmxbji';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -2400,13 +2400,26 @@ function drawBoss(b) {
   const sx = b.x - camX; if (sx < -260 || sx > W + 260) return;
   const fam = getComputedStyle(document.body).fontFamily;
   const bob = Math.sin(time * 2.2 + b.t) * 5, col = ['#7e57c2', '#546e7a', '#00838f'][b.idx % 3];
-  const K = b.big ? 1.5 : 1;                       // うらボスは ひとまわり おおきい
-  const aura = ctx.createLinearGradient(0, GROUND - 320 * K, 0, GROUND);
-  const ac = b.big ? '124,179,66' : '186,104,200';
-  aura.addColorStop(0, `rgba(${ac},0)`); aura.addColorStop(1, `rgba(${ac},${0.24 + 0.1 * Math.sin(time * 5)})`);
-  ctx.fillStyle = aura; ctx.fillRect(sx - 110 * K, GROUND - 320 * K, 220 * K, 320 * K);
-  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(sx, GROUND - 4, 66 * K, 12 * K, 0, 0, 6.29); ctx.fill();
-  ctx.save(); ctx.translate(sx, GROUND + bob); if (K !== 1) ctx.scale(K, K); ctx.lineJoin = 'round'; ctx.strokeStyle = '#2b2233'; ctx.lineWidth = 4;
+  const K = 1;
+  // 四角い オーラは やめる（背景に うすい グレーの 板が 見える ため）。
+  // 足もとの まるい かげ だけ に する。
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(sx, GROUND - 4, 66, 12, 0, 0, 6.29); ctx.fill();
+  // 1まい絵が あれば それを つかう（無ければ 下の 手描きに おちる）
+  const mim = BOSS_IMG['mid' + (b.idx % 3)];
+  if (imgOK(mim)) {
+    const mh = mim.naturalHeight, mw = mim.naturalWidth;
+    ctx.save(); ctx.translate(sx, GROUND + bob);
+    ctx.drawImage(mim, -mw / 2, -mh, mw, mh);
+    ctx.restore();
+    ctx.font = `900 17px ${fam}`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.lineWidth = 5; ctx.strokeStyle = '#fff';
+    const mnm = `👾 ${BOSS_NAME[b.idx % BOSS_NAME.length]}`;
+    ctx.strokeText(mnm, sx, GROUND - mh - 14);
+    ctx.fillStyle = '#6a1b9a'; ctx.fillText(mnm, sx, GROUND - mh - 14);
+    ctx.textBaseline = 'middle';
+    return;
+  }
+  ctx.save(); ctx.translate(sx, GROUND + bob); ctx.lineJoin = 'round'; ctx.strokeStyle = '#2b2233'; ctx.lineWidth = 4;
   ctx.fillStyle = '#37474f';
   for (const dx of [-30, 26]) { ctx.beginPath(); ctx.roundRect(dx - 13, -34, 26, 34, 7); ctx.fill(); ctx.stroke(); }
   const arm = Math.sin(time * 3 + b.t) * 0.35;
@@ -2443,9 +2456,7 @@ function drawStageBoss() {
   const fam = getComputedStyle(document.body).fontFamily;
   const bob = Math.sin(time * 1.8) * 8, hit = boss.flash > 0 && Math.floor(boss.flash * 22) % 2 === 0;
   const col = hit ? '#ffffff' : boss.col, NP = needPup();
-  const aura = ctx.createLinearGradient(0, GROUND - 430, 0, GROUND);
-  aura.addColorStop(0, 'rgba(30,10,50,0)'); aura.addColorStop(1, `rgba(30,10,50,${0.2 + 0.08 * Math.sin(time * 4)})`);
-  ctx.fillStyle = aura; ctx.fillRect(sx - 200, GROUND - 430, 400, 430);
+  // 四角い オーラは やめる。足もとの かげ だけ。
   ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(sx, GROUND - 4, 124, 18, 0, 0, 6.29); ctx.fill();
   // 1まい絵が あれば それを つかう（無ければ 下の 手描きに おちる）
   const bim = BOSS_IMG[boss.key];
