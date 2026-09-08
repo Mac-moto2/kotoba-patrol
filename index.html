@@ -348,7 +348,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtstlj2i';
+const ASSET_V = '?v=mtstlp8y';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -735,7 +735,7 @@ function playSong(i) { if (songIdx === i && bgm.on) return; const was = bgm.on; 
 (function () {
   if (typeof Audio === 'undefined') return;          // headless では 何も しない
 
-  const FILES = ["bay.mp3","beach.mp3","farm.mp3","mount.mp3","snow.mp3","jungle.mp3","city.mp3","patrol.mp3","lastboss.mp3","ending.mp3","trueboss.mp3","vehicle.mp3","clear.mp3","boss.mp3"];
+  const FILES = ["bay.mp3","beach.mp3","farm.mp3","mount.mp3","snow.mp3","jungle.mp3","city.mp3","patrol.mp3","lastboss.mp3","ending.mp3","trueboss.mp3","vehicle.mp3","boss.mp3","clear.mp3"];
   const BASE = 'bgm/';
   const VOL = 0.55;                                  // ふだんの 音量
   const DUCK = 0.26;                                 // しゃべって いる あいだ
