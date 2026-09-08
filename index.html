@@ -348,7 +348,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtstk3ms';
+const ASSET_V = '?v=mtstlh19';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -603,6 +603,10 @@ const SONGS = [
   { name:'vehicle', bpm:186, lead:'square', vol:0.10, drums:'drive', roots:[48,55,57,53], mel:[
     72,76,79,76, 84,0,79,0,  71,74,79,74, 83,0,79,0,  69,72,76,72, 81,0,76,0,  72,77,81,77, 84,0,86,0,
     88,84,79,84, 88,0,91,0,  86,83,79,83, 86,0,90,0,  84,81,76,81, 88,0,84,0,  86,0,84,0, 81,0,79,0 ] },
+  // 'boss' … 各ステージの 大ボス戦。
+  { name:'boss', bpm:156, lead:'sawtooth', vol:0.05, drums:'drive', roots:[45,41,43,40], mel:[
+    69,0,69,0, 72,0,0,0, 76,0,0,0, 72,0,0,0,  65,0,65,0, 69,0,0,0, 72,0,0,0, 69,0,0,0,
+    67,0,67,0, 71,0,0,0, 74,0,0,0, 71,0,0,0,  64,0,0,0, 67,0,0,0, 71,0,0,0, 72,0,0,0 ] },
   // 'clear' … ステージクリア画面の ファンファーレ。
   { name:'clear', bpm:128, lead:'square', vol:0.15, drums:'march', roots:[53,48,55,48], mel:[
     77,0,77,0, 77,0,0,0, 82,0,0,0, 0,0,0,0,  81,0,81,0, 81,0,0,0, 84,0,0,0, 0,0,0,0,
@@ -614,6 +618,11 @@ const BOSS_SONG = SONGS.findIndex(x => x.name === 'lastboss');
 const TRUE_SONG = SONGS.findIndex(x => x.name === 'trueboss');   // うらボス せんよう
 const VEH_SONG  = SONGS.findIndex(x => x.name === 'vehicle');    // 🚗 のって いる あいだ
 const CLEAR_SONG = SONGS.findIndex(x => x.name === 'clear');     // 🎉 クリア画面
+const SBOSS_SONG = SONGS.findIndex(x => x.name === 'boss');      // 👑 各ステージの 大ボス
+// いま たたかって いる 相手に あう ボス曲を えらぶ。
+//   うらボス → trueboss ／ さいごの ステージの ボス → lastboss ／ それ以外 → boss
+const bossSongIdx = () => (boss && boss.big) ? TRUE_SONG
+  : (stageIdx === LOCS.length - 1 ? BOSS_SONG : SBOSS_SONG);
 const END_SONG = SONGS.findIndex(x => x.name === 'ending');
 const bgm = { on:false, step:0, next:0, timer:0, gain:null, pad:null, stepLen:0.1 };
 let songIdx = MAP_SONG;
@@ -726,7 +735,7 @@ function playSong(i) { if (songIdx === i && bgm.on) return; const was = bgm.on; 
 (function () {
   if (typeof Audio === 'undefined') return;          // headless では 何も しない
 
-  const FILES = ["bay.mp3","beach.mp3","farm.mp3","mount.mp3","snow.mp3","jungle.mp3","city.mp3","patrol.mp3","lastboss.mp3","ending.mp3","trueboss.mp3","vehicle.mp3","clear.mp3"];
+  const FILES = ["bay.mp3","beach.mp3","farm.mp3","mount.mp3","snow.mp3","jungle.mp3","city.mp3","patrol.mp3","lastboss.mp3","ending.mp3","trueboss.mp3","vehicle.mp3","clear.mp3","boss.mp3"];
   const BASE = 'bgm/';
   const VOL = 0.55;                                  // ふだんの 音量
   const DUCK = 0.26;                                 // しゃべって いる あいだ
@@ -2139,7 +2148,7 @@ function bossDefeat() {
   for (let i = 0; i < 10; i++) floats.push({ text: ['🎉','⭐','🐾'][i % 3], x: boss.x + (Math.random() - 0.5) * 220, y: GROUND - 120 - Math.random() * 120, life: 1.6 + Math.random(), color: '#fff', emoji: true, vx: (Math.random() - 0.5) * 200, vy: -160 - Math.random() * 160 });
   // さいごの ステージだけ、たおした あとに うらボスが あらわれる
   if (stageIdx === LOCS.length - 1 && !trueBossOn) { spawnTrueBoss(); return; }
-  if (loc && (songIdx === BOSS_SONG || songIdx === TRUE_SONG)) playSong(loc.song);
+  if (loc && (songIdx === BOSS_SONG || songIdx === TRUE_SONG || songIdx === SBOSS_SONG)) playSong(loc.song);
   done = true;
   while (inPit(goalX, 160)) goalX += 180;
   floats.push({ text: '🚨 ステージボス げきは！ ゴールへ！ →', x: player.x + 40, y: player.y - 150, life: 3.2, color: '#d84315' });
@@ -2303,8 +2312,8 @@ function updateBoss(dt) {
       if (!arenaOn) {
         arenaOn = true; sfx.boss(); shake = 0.7; boss.atk = 2.2; boss.warn = 0;
         // ラスボス／うらボスは せんようの 曲に する
-        const bs = boss.big ? TRUE_SONG : BOSS_SONG;
-        if ((stageIdx === LOCS.length - 1 || boss.big) && bs >= 0) playSong(bs);
+        const bs = bossSongIdx();
+        if (bs >= 0) playSong(bs);
         cools = {}; refreshSwap();   // ボスせんは クールタイム リセットから
         floats.push({ text: `👑 ${boss.ja} が あらわれた！`, x: player.x + 60, y: player.y - 170, life: 3.2, color: boss.col });
         floats.push({ text: `${SKILL[boss.need].icon} ${needPup().ja}の とくいわざで こうげき！`, x: player.x + 60, y: player.y - 130, life: 3.4, color: '#d81b60' });
@@ -2409,7 +2418,7 @@ function update(dt) {
       vehT = 0;
       floats.push({ text: '🚗 ビークル しゅうりょう！', x: player.x + 40, y: player.y - 90, life: 1.4, color: '#455a64' });
       // 曲を もどす。ボスと たたかって いる さいちゅうなら ボスの 曲へ。
-      const back = inArena() ? (boss.big ? TRUE_SONG : BOSS_SONG) : loc.song;
+      const back = inArena() ? bossSongIdx() : loc.song;
       try { playSong(back >= 0 ? back : loc.song); } catch {}
     }
   }
