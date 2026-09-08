@@ -340,7 +340,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsmv6cx';
+const ASSET_V = '?v=mtsmvy4t';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -429,7 +429,8 @@ const BOX = 44, MAX_LV = 10, LIFE_BASE = 3, LIFE_CAP = 10, COIN_PER_LIFE = 100;
 const UNLOCK_CAR = 100, UNLOCK_POW = 200;
 const VEH_DUR = 7, VEH_COOL = 16;
 const RANKS = ['みならい','ルーキー','たんけんたい','レスキュー','ヒーロー','スーパー','ゴールド','プラチナ','ダイヤ','マスター','パウキング'];
-['0','1','2','3','4','5','6','true','escape'].forEach(k => { BOSS_IMG[k] = loadImg(`${IMGDIR}/bosses/${k}.png${ASSET_V}`); });
+['0','1','2','3','4','5','6','true','escape','mid0','mid1','mid2']
+  .forEach(k => { BOSS_IMG[k] = loadImg(`${IMGDIR}/bosses/${k}.png${ASSET_V}`); });
 const FEAT_PUP = { block:'chase', fire:'marshall', air:'skye', rock:'rubble', bridge:'rocky', current:'zuma' };
 const FEAT_JA  = { block:'ブロックの かべ', fire:'ほのお', air:'そらの じゃま', rock:'おおきな いわ', bridge:'こわれた はし', current:'はやい ながれ' };
 const ALL_SEQ = ['block','fire','air','rock','bridge','current'];
@@ -2525,6 +2526,17 @@ function drawEscapee() {
     emo(ctx, '🦠', sx, escapee.y + wob, 54);
   }
 }
+// 決めた 幅に おさまるまで 文字を 小さくして 描く。
+// カードから 文字が はみだす 事故を まとめて 防ぐ。
+function fitText(c, text, x, y, maxW, weight, size, fam, min = 12) {
+  let fs = size;
+  c.font = `${weight} ${fs}px ${fam}`;
+  while (c.measureText(text).width > maxW && fs > min) {
+    fs -= 1; c.font = `${weight} ${fs}px ${fam}`;
+  }
+  c.fillText(text, x, y);
+  return fs;
+}
 function drawBossShots() {
   for (const s of bossShots) {
     const bx = s.x - camX; if (bx < -80 || bx > W + 80) continue;
@@ -2562,7 +2574,7 @@ function drawBossHud() {
     const a = 0.55 + 0.45 * Math.sin(time * 26);
     ctx.globalAlpha = a; ctx.textAlign = 'center';
     ctx.font = `900 30px ${fam}`; ctx.lineWidth = 8; ctx.strokeStyle = '#fff';
-    const msg = boss.warnAir ? '⚡ ジャンプ しないで！' : '💣 ジャンプ！';
+    const msg = boss.warnAir ? '' : '💣 ジャンプ！';       // 高い こうげきの ときは 何も 出さない
     ctx.strokeText(msg, W / 2, y0 + 72); ctx.fillStyle = boss.warnAir ? '#7b1fa2' : '#d84315';
     ctx.fillText(msg, W / 2, y0 + 72); ctx.globalAlpha = 1;
   }
@@ -2979,18 +2991,16 @@ function draw() {
   if (introT > 0) {
     const k = Math.min(1, introT * 2); ctx.globalAlpha = k; ctx.fillStyle = '#fff';
     ctx.beginPath(); ctx.roundRect(W / 2 - 340, 176, 680, 132, 30); ctx.fill();
-    ctx.fillStyle = '#33363d'; ctx.font = `900 36px ${fam}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(`${loc.icon} ミッション ${stageIdx + 1}　${loc.ja}`, W / 2, 214);
-    ctx.font = `800 20px ${fam}`; ctx.fillStyle = '#d81b60';
-    // 白いカード（幅680）に おさまるよう 長さで 文字を ちぢめる
-    const sub2 = `👾 中ボス ${needBoss}たい ／ 👑 ${boss.ja}`;
-    let fs2 = 20;
-    ctx.font = `900 ${fs2}px ${fam}`;
-    while (ctx.measureText(sub2).width > 640 && fs2 > 13) { fs2--; ctx.font = `900 ${fs2}px ${fam}`; }
-    ctx.fillText(sub2, W / 2, 252);
+    // 白いカードは 幅680。内がわ 620px に すべて おさめる。
+    const CW = 620;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#33363d';
+    fitText(ctx, `${loc.icon} ミッション ${stageIdx + 1}　${loc.ja}`, W / 2, 214, CW, 900, 36, fam, 20);
+    ctx.fillStyle = '#d81b60';
+    fitText(ctx, `👾 中ボス ${needBoss}たい ／ 👑 ${boss.ja}`, W / 2, 252, CW, 900, 20, fam, 13);
     ctx.fillStyle = pup.uni;
-    ctx.fillText(loc.autoSwap ? '🐾 しかけに あわせて じどうで こうたい！ ボタンで とくいわざを つかおう！'
-      : `${mySkill().icon} ${pup.ja}の とくいわざ：${mySkill().tip}`, W / 2, 284);
+    fitText(ctx, loc.autoSwap ? '🐾 じどうで こうたい！ ボタンで とくいわざ！'
+      : `${mySkill().icon} ${pup.ja}：${mySkill().tip}`, W / 2, 284, CW, 800, 20, fam, 13);
     ctx.globalAlpha = 1;
   } else if (hintT > 0) {
     ctx.globalAlpha = Math.min(1, hintT); ctx.fillStyle = '#fff';
