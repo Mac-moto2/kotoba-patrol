@@ -336,7 +336,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsqtjax';
+const ASSET_V = '?v=mtsqwpje';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -848,6 +848,11 @@ const sfx = {
   splash() { noiseHit(0.45, 0.2, 500); tone(500, 0.3, 0, 'sine', 0.08, 900); },
   heli()   { tone(70, 1.0, 0, 'sawtooth', 0.07, 55); noiseHit(1.0, 0.06, 200); },
   kill()   { tone(500, 0.08, 0, 'square', 0.1, 900); tone(900, 0.15, 0.08, 'triangle', 0.12, 1400); },
+  // ── うらボス とうじょうの えんしゅつ よう ──
+  rumble() { tone(46, 2.6, 0, 'sine', 0.16); tone(69, 2.4, 0, 'triangle', 0.08); noiseHit(2.6, 0.05, 120); },
+  thunder(){ noiseHit(0.9, 0.22, 2600, 0.0); tone(60, 0.8, 0.05, 'sawtooth', 0.12, 38); },
+  roar()   { [110, 92, 78, 62].forEach((f, i) => tone(f, 1.4, i * 0.06, 'sawtooth', 0.13, f * 0.55));
+             noiseHit(1.6, 0.16, 220); tone(1200, 0.5, 0, 'square', 0.05, 180); },
 };
 // ═════════ よみあげ / speech ═════════
 const canSpeak = 'speechSynthesis' in window;
@@ -1267,6 +1272,7 @@ let inv = 0, hitT = 0, coinN = 0, life = LIFE_BASE, lastSafeX = 200, done = fals
 let boss = null, bossShots = [], arenaOn = false;
 let cools = {}, flyT = 0, swimT = 0, searchT = 0, vehT = 0, vehCool = 0;
 let trueBossOn = false;   // うらボスを だしたか
+let cine = null;          // うらボス とうじょうの カットシーン
 let escapee = null;       // うらボスを たおすと 中から とびだす やつ
 let screwT = 0, hammerT = 0, wallHint = 0, swapLock = 0;
 let pendingRank = false, rankAnimT = 0, ranked = false;
@@ -1377,7 +1383,7 @@ function startStage(i) {
            pat: BD.pat || 'throw', plan: [], cycle: 0,
            key: String(Math.min(i, STAGE_BOSS.length - 1)) };
   hintT = 4.2; introT = 3.2; time = 0; quizNo = Math.floor(Math.random() * 2);
-  trueBossOn = false; escapee = null;
+  trueBossOn = false; escapee = null; cine = null;
   player = { x: 200, y: GROUND - R, vy: 0, onGround: true, jumps: 0, run: 0 };
   lastSafeX = 200;
   if (!loc.allPups) pup = pupById(loc.pup);
@@ -1917,7 +1923,12 @@ function hurt(o) {
 const inArena = () => !!(boss && arenaOn && !boss.dead);
 function bossNeed() {
   if (!loc) return 'hammer';
-  if (loc.allPups) return ALL_SKILLS[(boss.max - boss.hp) % ALL_SKILLS.length];
+  if (loc.allPups) {
+    // ランダム。ただし いま と おなじ ものは えらばない
+    //（おなじだと「こうかバツグン」の あと 何も かわらず つまらない）
+    const cand = ALL_SKILLS.filter(k => !boss || k !== boss.need);
+    return cand[Math.floor(Math.random() * cand.length)] || ALL_SKILLS[0];
+  }
   const P = pupById(loc.pup); return P ? P.skill : 'hammer';
 }
 const needPup = () => PUPS.find(q => q.skill === boss.need) || PUPS[0];
@@ -2046,15 +2057,124 @@ function spawnTrueBoss() {
   boss = { ja: B.ja, face: B.face, col: B.col, x: at, hp: B.hp, max: B.hp,
            t: 0, atk: 2.4, warn: 0, warnAir: false, flash: 0, dead: false,
            need: 'hammer', pat: B.pat, plan: [], cycle: 0, big: true, key: 'true',
-           rise: 3.2 };   // 3.2秒 かけて じめんから せりあがる（この間は こうげきしない）
+           rise: 3.2, riseMax: 3.2 };
   boss.need = bossNeed();
-  arenaOn = false; bossShots.length = 0;
+  arenaOn = false; bossShots.length = 0; shots.length = 0;
   goalX = boss.x + 760; maxItemX = goalX + 600;
-  shake = 1.2; sfx.siren(); setTimeout(() => { try { sfx.boss(); } catch {} }, 500);
-  floats.push({ text: '🦠 ま、まだ いた！？', x: player.x + 40, y: player.y - 190, life: 3.4, color: '#33691e' });
-  floats.push({ text: `👑 うらボス「${B.ja}」 とうじょう！`, x: player.x + 40, y: player.y - 150, life: 3.6, color: '#7cb342' });
-  floats.push({ text: '🐾 6ぴき ぜんいんの ちからで たおせ！', x: player.x + 40, y: player.y - 110, life: 3.8, color: '#d81b60' });
+  // ★ ここから カットシーン。update() を とめて、じっくり 見せる。
+  cine = { t: 0, dur: CINE_DUR, cam0: camX, flash: 0, cracks: [], songDone: false, lit: -9 };
+  for (let i = 0; i < 9; i++) cine.cracks.push({ x: (i - 4) * 46 + (Math.random() - .5) * 30, w: 6 + Math.random() * 14, h: 40 + Math.random() * 90, d: 0.9 + Math.random() * 0.7 });
+  try { stopBgm(); } catch {}
+  sfx.rumble();
   updateHud();
+}
+// ── うらボス とうじょう カットシーン ──────────────────────
+// じかんの ながれ（ぜんぶで CINE_DUR びょう）
+//   0.0-1.3  くらく なる／黒帯が しまる／カメラが ボスへ よる
+//   1.3-3.0  じめんが われて ゆれる（土けむり）
+//   3.0-6.2  ボスが ゆっくり せりあがる（かみなり 3かい）／うらボスの 曲が はじまる
+//   6.2-7.6  ほうこう。画面が 赤く ひかり、はげしく ゆれる
+//   7.6-9.6  なまえプレートが たたきつけられる／よわてんの 説明
+//   9.6-10.4 黒帯が ひらいて ゲームに もどる
+const CINE_DUR = 10.4;
+function updateCine(dt) {
+  const c = cine, t = (c.t += dt);
+  // カメラは ボスが 画面の まんなか すこし 右に くるよう ゆっくり よる
+  const camTo = boss.x - W * 0.56;
+  const k = Math.min(1, t / 2.2), e = k * k * (3 - 2 * k);       // なめらかに
+  camX = c.cam0 + (camTo - c.cam0) * e;
+
+  // せりあがり（3.0秒から 3.2秒 かけて）
+  const r = Math.max(0, Math.min(1, (t - 3.0) / 3.2));
+  boss.rise = boss.riseMax * (1 - r);
+
+  if (t > 1.3 && t < 6.2) {
+    shake = Math.max(shake, 0.12 + 0.10 * Math.sin(t * 26));
+    if (Math.random() < 0.55) particles.push({ x: boss.x + (Math.random() - .5) * 320,
+      y: GROUND - Math.random() * 30, vx: (Math.random() - .5) * 180, vy: -90 - Math.random() * 210,
+      life: .8, color: ['#7cb342', '#9575cd', '#8d6e63', '#546e7a'][Math.floor(Math.random() * 4)] });
+  }
+  // かみなり
+  for (const at of [3.4, 4.6, 5.8]) {
+    if (c.lit < at && t >= at) { c.lit = at; c.flash = 1; sfx.thunder(); }
+  }
+  // うらボスの 曲
+  if (!c.songDone && t >= 3.0) { c.songDone = true; try { if (TRUE_SONG >= 0) playSong(TRUE_SONG); } catch {} }
+  // ほうこう
+  if (!c.roared && t >= 6.2) { c.roared = true; c.flash = 1.6; shake = 1.6; sfx.roar();
+    for (let i = 0; i < 40; i++) particles.push({ x: boss.x, y: GROUND - 200,
+      vx: (Math.random() - .5) * 900, vy: (Math.random() - .5) * 700, life: .9 + Math.random() * .6,
+      color: ['#fff59d', '#ef5350', '#7cb342'][i % 3] }); }
+  c.flash = Math.max(0, c.flash - dt * 2.6);
+
+  // つぶ を すすめる（update() を とばして いる ので ここで）
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const q = particles[i]; q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 900 * dt; q.life -= dt;
+    if (q.life <= 0) particles.splice(i, 1);
+  }
+  shake = Math.max(0, shake - dt * 1.4);
+  time += dt;
+
+  if (t >= c.dur) {                                   // おわり。ゲームに もどす
+    cine = null; boss.rise = 0; shake = 0.8;
+    floats.push({ text: '🐾 6ぴき ぜんいんの ちからで たおせ！', x: player.x + 40, y: player.y - 130, life: 3.4, color: '#d81b60' });
+    updateHud();
+  }
+}
+function drawCine() {
+  const c = cine, t = c.t, fam = getComputedStyle(document.body).fontFamily;
+  // ① あんてん（まわりを くらく する）
+  const dark = Math.min(0.72, t / 1.3 * 0.72) * (t > c.dur - 0.8 ? Math.max(0, (c.dur - t) / 0.8) : 1);
+  ctx.fillStyle = `rgba(6,10,4,${dark})`; ctx.fillRect(0, 0, W, H);
+  // ボスの まわりだけ あかるく のこす（スポットライト）
+  if (boss) {
+    const bx = boss.x - camX, g = ctx.createRadialGradient(bx, GROUND - 150, 40, bx, GROUND - 150, 420);
+    g.addColorStop(0, `rgba(200,255,160,${0.30 * dark / 0.72})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+  // ② じめんの われめ
+  if (t > 1.3 && boss) {
+    const gr = Math.min(1, (t - 1.3) / 1.6), bx = boss.x - camX;
+    ctx.fillStyle = '#1b1b12';
+    for (const k of c.cracks) {
+      const h = k.h * gr * k.d;
+      ctx.beginPath(); ctx.moveTo(bx + k.x - k.w / 2, GROUND);
+      ctx.lineTo(bx + k.x, GROUND - h); ctx.lineTo(bx + k.x + k.w / 2, GROUND); ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = `rgba(124,179,66,${0.35 * gr})`;
+    ctx.beginPath(); ctx.ellipse(bx, GROUND - 6, 190 * gr, 22 * gr, 0, 0, 6.29); ctx.fill();
+  }
+  // ③ かみなり／ほうこうの ひかり
+  if (c.flash > 0) { ctx.fillStyle = `rgba(255,255,255,${Math.min(0.85, c.flash * 0.6)})`; ctx.fillRect(0, 0, W, H); }
+  // ④ 黒帯（えいがの ように）
+  const bar = Math.min(1, t / 0.7) * (t > c.dur - 0.8 ? Math.max(0, (c.dur - t) / 0.8) : 1);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, 62 * bar); ctx.fillRect(0, H - 62 * bar, W, 62 * bar);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  // ⑤ 「ま、まだ いた！？」
+  if (t > 1.6 && t < 6.4) {
+    const a = Math.min(1, (t - 1.6) / 0.4) * Math.min(1, (6.4 - t) / 0.5);
+    ctx.globalAlpha = a; ctx.font = `900 34px ${fam}`; ctx.lineWidth = 8; ctx.strokeStyle = '#000';
+    ctx.strokeText('ま、まだ いた…！？', W / 2, 120); ctx.fillStyle = '#e8f5e9';
+    ctx.fillText('ま、まだ いた…！？', W / 2, 120); ctx.globalAlpha = 1;
+  }
+  // ⑥ なまえプレート（たたきつける）
+  if (t > 7.6) {
+    const u = Math.min(1, (t - 7.6) / 0.35);
+    const sc = 3.0 - 2.0 * (u * u * (3 - 2 * u));               // 大きく → ぴたっと
+    const a = Math.min(1, (t - 7.6) / 0.2) * (t > c.dur - 0.5 ? Math.max(0, (c.dur - t) / 0.5) : 1);
+    ctx.save(); ctx.globalAlpha = a; ctx.translate(W / 2, H - 150); ctx.scale(sc, sc);
+    ctx.fillStyle = 'rgba(10,20,6,.88)'; ctx.strokeStyle = '#7cb342'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.roundRect(-260, -48, 520, 96, 16); ctx.fill(); ctx.stroke();
+    ctx.font = `900 18px ${fam}`; ctx.fillStyle = '#aed581';
+    ctx.fillText('🦠 うらボス', 0, -24);
+    ctx.font = `900 40px ${fam}`; ctx.lineWidth = 7; ctx.strokeStyle = '#1b5e20';
+    ctx.strokeText(TRUE_BOSS.ja, 0, 6); ctx.fillStyle = '#fff'; ctx.fillText(TRUE_BOSS.ja, 0, 6);
+    ctx.font = `900 17px ${fam}`; ctx.fillStyle = '#ffe082';
+    ctx.fillText('よわてんは まいかい かわる！ よく 見て こうたい！', 0, 32);
+    ctx.restore(); ctx.globalAlpha = 1;
+  }
+  ctx.textBaseline = 'alphabetic';
 }
 function bossSkillHit() {
   if (!inArena()) return;
@@ -2173,6 +2293,7 @@ function autoSwap(dt) {
   speakSeq([[pup.ja, 'ja'], ['、しゅつどう！', 'ja']]);
 }
 function update(dt) {
+  if (cine) { updateCine(dt); return; }     // ★ とうじょう演出ちゅうは ゲームを とめる
   time += dt; hintT -= dt; introT -= dt; powerT -= dt; inv -= dt; hitT -= dt;
   for (const k in cools) if (cools[k] > 0) { cools[k] = Math.max(0, cools[k] - dt); if (cools[k] === 0) refreshSwap(); }
   if (vehCool > 0) vehCool -= dt;
@@ -2621,7 +2742,7 @@ function drawStageBoss() {
     const K = (boss.big ? 1.42 : 1.05);
     const bh = bim.naturalHeight * K, bw = bim.naturalWidth * K;
     // 登場演出：じめんの 下から ゆっくり せりあがる
-    const rise = boss.rise > 0 ? Math.min(1, boss.rise / 3.2) : 0;
+    const rise = boss.rise > 0 ? Math.min(1, boss.rise / (boss.riseMax || 3.2)) : 0;
     ctx.save();
     if (rise > 0) { ctx.beginPath(); ctx.rect(0, 0, W, GROUND); ctx.clip(); }
     ctx.translate(sx, GROUND + bob + bh * rise);
@@ -3252,7 +3373,7 @@ function frame(ts) {
     if (state === 'play') update(dt); else if (state === 'rankup') updateRankUp(dt); else updateDrive(dt);
   } else lastTs = 0;
   if (state === 'drive') drawDrive();
-  else if (state === 'play' || state === 'card' || state === 'rankup' || state === 'over') { draw(); if (state === 'rankup') drawRankFx(); }
+  else if (state === 'play' || state === 'card' || state === 'rankup' || state === 'over') { draw(); if (state === 'rankup') drawRankFx(); if (cine) drawCine(); }
 }
 requestAnimationFrame(frame);
 show('menu');
