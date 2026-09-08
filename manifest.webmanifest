@@ -1,0 +1,16 @@
+{
+  "name": "ことばパトロール",
+  "short_name": "ことばパトロール",
+  "description": "3さい からの にほんご・えいご ことば あそび",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#0d2b45",
+  "theme_color": "#1565c0",
+  "icons": [
+    { "src": "images/2026/09/icon/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "images/2026/09/icon/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "images/2026/09/icon/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

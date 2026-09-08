@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- ホーム画面に ついかしたときの アイコン。
+     iOS は かどを 自動で まるめるので、画像は 四角の まま 用意する。 -->
+<link rel="apple-touch-icon" href="images/2026/09/icon/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="images/2026/09/icon/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="images/2026/09/icon/icon-512.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="ことばパトロール">
+<meta name="theme-color" content="#1565c0">
 <title>ことばパトロール / Word Patrol</title>
 <style>
   :root{ --ink:#33363d; --pop:#ff5252; --sky:#29b6f6; --sun:#ffd54f; }
@@ -330,7 +338,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsiyyvh';
+const ASSET_V = '?v=mtsjb08o';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -1004,21 +1012,28 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
   // iOS Safari は ユーザー操作の 中で 一度 再生した Audio要素しか
   // その後 鳴らせない。要素を 1つだけ 作って 使い回し、
   // 最初の タップ（ensureAudio）で 無音再生して 解錠する。
-  const el = new Audio();
+  const el = new Audio();          // セリフを しゃべる ための 要素
   el.preload = 'auto';
   el.playsInline = true;
+  // 解錠は べつの 要素で おこなう。おなじ 要素を つかうと、
+  // 解錠の 非同期な pause() が すぐ あとに はじまった セリフを 止め、
+  // onended が こない → voiceDuck(false) が よばれない →
+  // BGM が 14% に しぼられた ままに なる（じっさいに 起きた）。
+  const unlockEl = new Audio();
+  unlockEl.preload = 'auto';
+  unlockEl.playsInline = true;
+  unlockEl.muted = true;
   let unlocked = false;
   function unlockVoice() {
     if (unlocked) return;
     unlocked = true;
     try {
-      el.muted = true;
-      el.src = BASE + FIRST + ASSET_V;
-      const p = el.play();
-      const fin = () => { try { el.pause(); el.currentTime = 0; } catch {} el.muted = false; };
-      if (p && p.then) p.then(fin).catch(() => { el.muted = false; });
+      unlockEl.src = BASE + FIRST;
+      const p = unlockEl.play();
+      const fin = () => { try { unlockEl.pause(); unlockEl.currentTime = 0; } catch {} };
+      if (p && p.then) p.then(fin).catch(() => {});
       else fin();
-    } catch { el.muted = false; }
+    } catch {}
   }
   if (typeof ensureAudio === 'function') {
     const origEnsure = ensureAudio;
@@ -1043,14 +1058,20 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
     try { speechSynthesis.cancel(); } catch {}
     voiceDuck(true);
     return new Promise(res => {
-      let i = 0, settled = false;
+      let i = 0, settled = false, guard = 0;
       const done = () => {
         if (settled || my !== speakToken) return;
-        settled = true; voiceDuck(false); res();
+        settled = true; clearTimeout(guard); voiceDuck(false); res();
       };
+      // 保険：さいあく 再生が 止まっても かならず ダッキングを もどす。
+      // もどし わすれると BGM が しぼられた ままに なる。
+      guard = setTimeout(() => {
+        if (settled) return;
+        settled = true; voiceDuck(false); res();
+      }, 2500 + files.length * 3500);
       const fallback = () => {                       // 再生に 失敗したら 合成音声へ
         if (settled || my !== speakToken) return;
-        settled = true; voiceDuck(false);
+        settled = true; clearTimeout(guard); voiceDuck(false);
         origSeq(parts.slice(i)).then(res);
       };
       const next = () => {
