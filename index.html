@@ -330,12 +330,13 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
+const ASSET_V = '?v=mtsiyyvh';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
-  PUP_IMG[P.id] = loadImg(`${IMGDIR}/pups/${P.id}.png`);
-  PUP_RUN[P.id] = [loadImg(`${IMGDIR}/pups/${P.id}-run1.png`), loadImg(`${IMGDIR}/pups/${P.id}-run2.png`)];
-  CAR_IMG[P.id] = loadImg(`${IMGDIR}/cars/${P.id}.png`);
+  PUP_IMG[P.id] = loadImg(`${IMGDIR}/pups/${P.id}.png${ASSET_V}`);
+  PUP_RUN[P.id] = [loadImg(`${IMGDIR}/pups/${P.id}-run1.png${ASSET_V}`), loadImg(`${IMGDIR}/pups/${P.id}-run2.png${ASSET_V}`)];
+  CAR_IMG[P.id] = loadImg(`${IMGDIR}/cars/${P.id}.png${ASSET_V}`);
 });
 const imgOK = im => im && im.complete && im.naturalWidth > 0;
 function tinted(im, col) {                     // やられ演出：赤くフラッシュした版をキャッシュ
@@ -418,7 +419,7 @@ const BOX = 44, MAX_LV = 10, LIFE_BASE = 3, LIFE_CAP = 10, COIN_PER_LIFE = 100;
 const UNLOCK_CAR = 100, UNLOCK_POW = 200;
 const VEH_DUR = 7, VEH_COOL = 16;
 const RANKS = ['みならい','ルーキー','たんけんたい','レスキュー','ヒーロー','スーパー','ゴールド','プラチナ','ダイヤ','マスター','パウキング'];
-['0','1','2','3','4','5','6','true','escape'].forEach(k => { BOSS_IMG[k] = loadImg(`${IMGDIR}/bosses/${k}.png`); });
+['0','1','2','3','4','5','6','true','escape'].forEach(k => { BOSS_IMG[k] = loadImg(`${IMGDIR}/bosses/${k}.png${ASSET_V}`); });
 const FEAT_PUP = { block:'chase', fire:'marshall', air:'skye', rock:'rubble', bridge:'rocky', current:'zuma' };
 const FEAT_JA  = { block:'ブロックの かべ', fire:'ほのお', air:'そらの じゃま', rock:'おおきな いわ', bridge:'こわれた はし', current:'はやい ながれ' };
 const ALL_SEQ = ['block','fire','air','rock','bridge','current'];
@@ -1012,7 +1013,7 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
     unlocked = true;
     try {
       el.muted = true;
-      el.src = BASE + FIRST;
+      el.src = BASE + FIRST + ASSET_V;
       const p = el.play();
       const fin = () => { try { el.pause(); el.currentTime = 0; } catch {} el.muted = false; };
       if (p && p.then) p.then(fin).catch(() => { el.muted = false; });
@@ -1057,7 +1058,7 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
         if (i >= files.length) return done();
         el.onended = () => { i++; setTimeout(next, 120); };
         el.onerror = fallback;
-        el.src = BASE + files[i];
+        el.src = BASE + files[i] + ASSET_V;
         const pr = el.play();
         if (pr && pr.catch) pr.catch(fallback);
       };
