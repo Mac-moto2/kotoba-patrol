@@ -348,7 +348,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtstg7o9';
+const ASSET_V = '?v=mtsti0i8';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -1272,6 +1272,19 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
         settled = true; speaking = false; voiceDuck(false); stopWA(); res();
       }, 3000 + files.length * 4000);
 
+      // ※ nextEl を さきに 定義する こと。
+      //   .catch(nextEl) のように 名前を そのまま わたすと、
+      //   const の 巻き上げ（TDZ）で ReferenceError に なり、
+      //   Promise の 中なので エラーも 表に 出ずに 無音に なる（実測で 確認）。
+      const nextEl = () => {
+        if (settled || my !== speakToken) return finish();
+        if (i >= files.length) return finish();
+        el.onended = () => { i++; setTimeout(nextEl, 120); };
+        el.onerror = toSynth;
+        el.src = BASE + files[i] + AV();
+        const pr = el.play();
+        if (pr && pr.catch) pr.catch(toSynth);
+      };
       const nextWA = () => {
         if (settled || my !== speakToken) return finish();
         if (i >= files.length) return finish();
@@ -1284,16 +1297,7 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
           n.onended = () => { waNode = null; i++; setTimeout(nextWA, 100); };
           waNode = n;
           n.start();
-        }).catch(nextEl);                            // 読めなければ 要素の 道へ
-      };
-      const nextEl = () => {
-        if (settled || my !== speakToken) return finish();
-        if (i >= files.length) return finish();
-        el.onended = () => { i++; setTimeout(nextEl, 120); };
-        el.onerror = toSynth;
-        el.src = BASE + files[i] + AV();
-        const pr = el.play();
-        if (pr && pr.catch) pr.catch(toSynth);
+        }).catch(() => nextEl());                    // 読めなければ 要素の 道へ
       };
 
       if (canWA()) nextWA(); else nextEl();
