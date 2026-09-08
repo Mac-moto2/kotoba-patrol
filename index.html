@@ -140,11 +140,11 @@
   #ending p{ font-size:22px; margin:0 0 16px; font-weight:800; text-shadow:0 2px 0 rgba(0,0,0,.3); }
   #intro{ z-index:60; background:#0b1020; padding:0; }
   #intro canvas{ position:absolute; inset:0; width:960px; height:540px; border-radius:14px; }
-  #introGo{ position:absolute; left:50%; bottom:18px; transform:translateX(-50%);
+  #introGo{ position:absolute; left:50%; top:252px; transform:translate(-50%,-50%);
     border:0; border-radius:44px; padding:16px 52px; font-size:30px; font-weight:900;
     font-family:inherit; color:#fff; background:#e53935; box-shadow:0 6px 0 #b71c1c, 0 0 0 6px rgba(255,255,255,.18);
     cursor:pointer; animation:introPulse 1.1s ease-in-out infinite; }
-  @keyframes introPulse{ 0%,100%{ transform:translateX(-50%) scale(1); } 50%{ transform:translateX(-50%) scale(1.07); } }
+  @keyframes introPulse{ 0%,100%{ transform:translate(-50%,-50%) scale(1); } 50%{ transform:translate(-50%,-50%) scale(1.07); } }
   .confetti{ position:absolute; top:-40px; font-size:30px; animation:fall linear infinite; pointer-events:none; }
   @keyframes fall{ to{ transform:translateY(620px) rotate(360deg); } }
 </style>
@@ -442,6 +442,9 @@ const STAGE_BOSS = [
   { ja:'メカ・パウキング',   face:'👑', col:'#ab47bc', hp:6, pat:'king'   },
 ];
 const BOSS_PATS = ['throw','bubble','fan','dive','slam','burst'];
+// 🦠 うらボス：さいごの ボスを たおすと あらわれる。
+//    HP が たかく、こうげきも はやい。6ぴき ぜんいんの ちからが いる。
+const TRUE_BOSS = { ja:'キングバイキン', face:'🦠', col:'#7cb342', hp:9, pat:'chaos' };
 const ARENA = 340;   // ボスと プレイヤーの きょり
 // ═════════ DOM ═════════
 const $ = id => document.getElementById(id);
@@ -789,12 +792,6 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
   }));
 
   const ease = x => 1 - Math.pow(1 - x, 3);
-  const paws = [];      // はしった あとの 足あと
-  const sparks = [];    // きらめき
-  function spark(x, y, col) {
-    for (let i = 0; i < 10; i++) sparks.push({ x, y, vx: (Math.random() - .5) * 260,
-      vy: -60 - Math.random() * 220, life: .6 + Math.random() * .5, col });
-  }
   const HOME_X = (i, n) => 175 + i * (610 / Math.max(1, n - 1));
 
   function skyline(y, col, off, w, seed) {
@@ -820,9 +817,6 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
     g.addColorStop(.55, `rgb(${40 + 130 * dawn},${60 + 130 * dawn},${110 + 90 * dawn})`);
     g.addColorStop(1, `rgb(${120 + 90 * dawn},${150 + 70 * dawn},${190 + 40 * dawn})`);
     c.fillStyle = g; c.fillRect(0, 0, 960, 540);
-    // カメラ：さいしょ すこし よってから ひく
-    const zoom = 1 + Math.max(0, 1 - t / 2.6) * 0.09;
-    c.save(); c.translate(480, 300); c.scale(zoom, zoom); c.translate(-480, -300);
 
     // ほし（夜あけと ともに 消える）
     const sa = Math.max(0, 1 - dawn * 1.3);
@@ -889,8 +883,6 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
       const idle = Math.sin(t * 3 + i) * 4;
       const jump = launching ? Math.max(0, Math.sin((t - launching) * 7)) * 46 : 0;
       const feet = 452 - (moving ? 0 : idle * 0.4) - jump;
-      if (moving && Math.random() < 0.22) paws.push({ x: x - 26, y: feet + 6, life: 1.1 });
-      if (!moving && Math.abs(p - 1) < 0.02) spark(x, feet - 60, P.uni || '#ffd54f');
       try {
         drawPup(c, x, feet, jump > 1, t * 14 + i, 1.35, P, 'normal', moving);
       } catch {
@@ -907,25 +899,6 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
       }
     }
 
-    // ── 足あと ──
-    for (let i = paws.length - 1; i >= 0; i--) {
-      const w = paws[i]; w.life -= 0.016;
-      if (w.life <= 0) { paws.splice(i, 1); continue; }
-      c.globalAlpha = Math.min(.5, w.life) ;
-      c.fillStyle = '#f9a825'; c.font = '20px sans-serif'; c.textAlign = 'center';
-      c.fillText('🐾', w.x, w.y);
-      c.globalAlpha = 1;
-    }
-    // ── きらめき ──
-    for (let i = sparks.length - 1; i >= 0; i--) {
-      const sp = sparks[i]; sp.life -= 0.016;
-      if (sp.life <= 0) { sparks.splice(i, 1); continue; }
-      sp.x += sp.vx * 0.016; sp.y += sp.vy * 0.016; sp.vy += 560 * 0.016;
-      c.globalAlpha = Math.min(1, sp.life * 2); c.fillStyle = sp.col;
-      c.beginPath(); c.arc(sp.x, sp.y, 3.2, 0, 6.3); c.fill(); c.globalAlpha = 1;
-    }
-    c.restore();                                   // カメラ よせを もどす
-
     // ── サイレンの てんめつ ──
     if (t > 2.0 || launching) {
       const s = launching ? 1 : 0.5;
@@ -940,11 +913,6 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
       const bounce = tp < 1 ? -Math.cos(tp * Math.PI) * 30 * (1 - tp) : 0;
       const y = 96 + (1 - ease(tp)) * -140 + bounce;
       c.save(); c.textAlign = 'center';
-      // うしろの ひかり
-      const rg = c.createRadialGradient(480, y - 16, 10, 480, y - 16, 300);
-      rg.addColorStop(0, 'rgba(255,235,150,.34)'); rg.addColorStop(1, 'rgba(255,235,150,0)');
-      c.fillStyle = rg; c.fillRect(180, y - 130, 600, 230);
-      c.font = '40px sans-serif'; c.fillText('🐾', 480, y - 62);
       c.font = 'bold 60px "Hiragino Sans","Noto Sans JP",sans-serif';
       c.lineWidth = 12; c.strokeStyle = '#0d47a1'; c.strokeText('ことばパトロール', 480, y);
       const tg = c.createLinearGradient(0, y - 46, 0, y + 12);
@@ -964,7 +932,7 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
       if (lt > 0.15) {
         // ドンッと 出て、さいごに フェードアウト
         const pop = Math.min(1, (lt - .15) * 5);
-        const fade = lt > 2.4 ? Math.max(0, 1 - (lt - 2.4) / 0.6) : 1;
+        const fade = lt > 4.4 ? Math.max(0, 1 - (lt - 4.4) / 0.8) : 1;
         const sc = 1 + (1 - pop) * 0.7 + Math.sin(lt * 5) * 0.03;
         c.save(); c.textAlign = 'center'; c.globalAlpha = pop * fade;
         c.translate(480, 292); c.scale(sc, sc);
@@ -976,7 +944,7 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
         c.fillStyle = fg; c.fillText('しゅつどう！', 0, 0);
         c.restore();
       }
-      if (lt > 3.0 && !done) { done = true; finish(); return; }
+      if (lt > 5.2 && !done) { done = true; finish(); return; }
     }
     raf = requestAnimationFrame(frame);
   }
@@ -989,17 +957,18 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
 
   function start(e) {
     if (e) e.preventDefault();
-    if (launching) return;
+    if (launching) { if (!done) { done = true; finish(); } return; }   // 2回目の タップで スキップ
     // iOS は この タップの 中で 音を 解錠する 必要が ある。
     // ensureAudio() が startBgm() を 呼ぶので、その前に 曲を 決める。
-    try { if (typeof PATROL_SONG === 'number' && PATROL_SONG >= 0) songIdx = PATROL_SONG; } catch {}
     try { ensureAudio(); } catch {}
+    // playSong は いま鳴っている曲を 止めてから かけ直すので、
+    // 先に BGM が 始まって いても かくじつに 行進曲へ 切りかわる。
+    try { if (typeof PATROL_SONG === 'number' && PATROL_SONG >= 0) playSong(PATROL_SONG); } catch {}
     try { sfx.siren(); setTimeout(() => { try { sfx.siren(); } catch {} }, 900); } catch {}
     try {
       const P = list[0];
       if (P && typeof speakSeq === 'function') speakSeq([[P.ja, 'ja'], ['、しゅつどう！', 'ja']]);
     } catch {}
-    for (const [i2, P2] of list.entries()) spark(HOME_X(i2, list.length), 452 - 70, '#fff59d');
     launching = (performance.now() - t0) / 1000;
     btn.classList.add('hidden');
   }
@@ -1129,6 +1098,7 @@ let hintT = 0, introT = 0, time = 0, lastTs = 0, quizNo = 0, powerT = 0;
 let inv = 0, hitT = 0, coinN = 0, life = LIFE_BASE, lastSafeX = 200, done = false, shake = 0;
 let boss = null, bossShots = [], arenaOn = false;
 let cools = {}, flyT = 0, swimT = 0, searchT = 0, vehT = 0, vehCool = 0;
+let trueBossOn = false;   // うらボスを だしたか
 let screwT = 0, hammerT = 0, wallHint = 0, swapLock = 0;
 let pendingRank = false, rankAnimT = 0, ranked = false;
 let driveT = 0, driveFrom = null, driveTo = null, unlockMsg = '';
@@ -1237,6 +1207,7 @@ function startStage(i) {
            t: 0, atk: 2.6, warn: 0, warnAir: false, flash: 0, dead: false, need: 'hammer',
            pat: BD.pat || 'throw', plan: [], cycle: 0 };
   hintT = 4.2; introT = 3.2; time = 0; quizNo = Math.floor(Math.random() * 2);
+  trueBossOn = false;
   player = { x: 200, y: GROUND - R, vy: 0, onGround: true, jumps: 0, run: 0 };
   lastSafeX = 200;
   if (!loc.allPups) pup = pupById(loc.pup);
@@ -1798,6 +1769,17 @@ function planVolley() {
       add(0.16, { hi: 26,  spd: 1.2 });
       add(0.32, { hi: 150, spd: 1.2, air: true });
       break;
+    case 'chaos': {                                  // 🦠 うらボス：ほかの くせを ランダムに ＋ おいうち
+      const sub = BOSS_PATS[Math.floor(Math.random() * BOSS_PATS.length)];
+      if (sub === 'fan') { add(0,{hi:26,spd:1.2}); add(.15,{hi:96,spd:1.2,air:true}); add(.3,{hi:168,spd:1.2,air:true}); }
+      else if (sub === 'bubble') { add(0,{hi:40,spd:.95,wave:52,r:22}); add(.35,{hi:150,spd:.95,wave:52,r:22,air:true}); }
+      else if (sub === 'dive') { add(0,{hi:176,spd:1.5,air:true,r:18}); add(.22,{hi:140,spd:1.5,air:true,r:18}); add(.44,{hi:104,spd:1.5,air:true,r:18}); }
+      else if (sub === 'slam') { add(0,{hi:126,spd:.8,r:38,air:true}); add(.42,{hi:18,spd:1.7,r:18}); }
+      else if (sub === 'burst') { add(0,{hi:26,spd:1.3}); add(.13,{hi:26,spd:1.3}); add(.26,{hi:150,spd:1.3,air:true}); }
+      else { add(0,{hi:26,spd:1.1}); add(.3,{hi:158,spd:1.1,air:true}); }
+      add(.8, { hi: 60, spd: 1.6, r: 16 });          // おいうちの はやい たま
+      break;
+    }
     default:                                         // 🤖 1つずつ ゆっくり
       add(0, { hi: Math.random() < 0.35 ? 158 : 26, spd: .85,
                air: Math.random() < 0.35 });
@@ -1806,7 +1788,7 @@ function planVolley() {
   boss.plan = plan.map(e => ({ at: boss.t + e.at, opt: e.opt }));
 }
 // パターンごとの こうげき かんかく
-const BOSS_GAP = { throw: 2.6, bubble: 2.3, fan: 2.5, dive: 1.9, slam: 2.4, burst: 2.8, king: 2.0 };
+const BOSS_GAP = { throw: 2.6, bubble: 2.3, fan: 2.5, dive: 1.9, slam: 2.4, burst: 2.8, king: 2.0, chaos: 1.5 };
 function bossHurtPlayer() {
   inv = 1.7; hitT = 0.7; shake = 0.4; sfx.hurt();
   player.vy = -400; player.onGround = false;
@@ -1829,9 +1811,28 @@ function bossDefeat() {
   burst(boss.x, GROUND - 200, boss.col, 40); burst(boss.x, GROUND - 90, '#ffd54f', 34);
   for (let i = 0; i < 14; i++) popCoin(boss.x + (i - 7) * 32, GROUND - 100 - (i % 5) * 20);
   for (let i = 0; i < 10; i++) floats.push({ text: ['🎉','⭐','🐾'][i % 3], x: boss.x + (Math.random() - 0.5) * 220, y: GROUND - 120 - Math.random() * 120, life: 1.6 + Math.random(), color: '#fff', emoji: true, vx: (Math.random() - 0.5) * 200, vy: -160 - Math.random() * 160 });
+  // さいごの ステージだけ、たおした あとに うらボスが あらわれる
+  if (stageIdx === LOCS.length - 1 && !trueBossOn) { spawnTrueBoss(); return; }
   done = true;
   while (inPit(goalX, 160)) goalX += 180;
   floats.push({ text: '🚨 ステージボス げきは！ ゴールへ！ →', x: player.x + 40, y: player.y - 150, life: 3.2, color: '#d84315' });
+  updateHud();
+}
+// 🦠 うらボス しゅつげん
+function spawnTrueBoss() {
+  trueBossOn = true;
+  const B = TRUE_BOSS;
+  const at = Math.max(player.x + 1250, boss.x + 900);
+  boss = { ja: B.ja, face: B.face, col: B.col, x: at, hp: B.hp, max: B.hp,
+           t: 0, atk: 2.4, warn: 0, warnAir: false, flash: 0, dead: false,
+           need: 'hammer', pat: B.pat, plan: [], cycle: 0, big: true };
+  boss.need = bossNeed();
+  arenaOn = false; bossShots.length = 0;
+  goalX = boss.x + 760; maxItemX = goalX + 600;
+  shake = 1.2; sfx.siren(); setTimeout(() => { try { sfx.boss(); } catch {} }, 500);
+  floats.push({ text: '🦠 ま、まだ いた！？', x: player.x + 40, y: player.y - 190, life: 3.4, color: '#33691e' });
+  floats.push({ text: `👑 うらボス「${B.ja}」 とうじょう！`, x: player.x + 40, y: player.y - 150, life: 3.6, color: '#7cb342' });
+  floats.push({ text: '🐾 6ぴき ぜんいんの ちからで たおせ！', x: player.x + 40, y: player.y - 110, life: 3.8, color: '#d81b60' });
   updateHud();
 }
 function bossSkillHit() {
@@ -2298,11 +2299,13 @@ function drawBoss(b) {
   const sx = b.x - camX; if (sx < -260 || sx > W + 260) return;
   const fam = getComputedStyle(document.body).fontFamily;
   const bob = Math.sin(time * 2.2 + b.t) * 5, col = ['#7e57c2', '#546e7a', '#00838f'][b.idx % 3];
-  const aura = ctx.createLinearGradient(0, GROUND - 320, 0, GROUND);
-  aura.addColorStop(0, 'rgba(186,104,200,0)'); aura.addColorStop(1, `rgba(186,104,200,${0.24 + 0.1 * Math.sin(time * 5)})`);
-  ctx.fillStyle = aura; ctx.fillRect(sx - 110, GROUND - 320, 220, 320);
-  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(sx, GROUND - 4, 66, 12, 0, 0, 6.29); ctx.fill();
-  ctx.save(); ctx.translate(sx, GROUND + bob); ctx.lineJoin = 'round'; ctx.strokeStyle = '#2b2233'; ctx.lineWidth = 4;
+  const K = b.big ? 1.5 : 1;                       // うらボスは ひとまわり おおきい
+  const aura = ctx.createLinearGradient(0, GROUND - 320 * K, 0, GROUND);
+  const ac = b.big ? '124,179,66' : '186,104,200';
+  aura.addColorStop(0, `rgba(${ac},0)`); aura.addColorStop(1, `rgba(${ac},${0.24 + 0.1 * Math.sin(time * 5)})`);
+  ctx.fillStyle = aura; ctx.fillRect(sx - 110 * K, GROUND - 320 * K, 220 * K, 320 * K);
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(sx, GROUND - 4, 66 * K, 12 * K, 0, 0, 6.29); ctx.fill();
+  ctx.save(); ctx.translate(sx, GROUND + bob); if (K !== 1) ctx.scale(K, K); ctx.lineJoin = 'round'; ctx.strokeStyle = '#2b2233'; ctx.lineWidth = 4;
   ctx.fillStyle = '#37474f';
   for (const dx of [-30, 26]) { ctx.beginPath(); ctx.roundRect(dx - 13, -34, 26, 34, 7); ctx.fill(); ctx.stroke(); }
   const arm = Math.sin(time * 3 + b.t) * 0.35;
