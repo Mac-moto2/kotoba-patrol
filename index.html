@@ -335,7 +335,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsqkh2y';
+const ASSET_V = '?v=mtsqqsiu';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -366,32 +366,32 @@ const LOCS = [
     song:0, speed:214, choices:2, obs:['cone'], obsN:1, bosses:2 },
 
   { id:'sea', ja:'ふかい うみ', jaSpeak:'深い海', en:'Deep Sea', icon:'🌊', words:'animals',
-    pup:'zuma', feat:'current', mode:'swim', alwaysVeh:true,
+    pup:'zuma', feat:'current', mode:'swim',
     mission:'うみの なかを およいで すすめ！ はやい ながれは スクリューだ！',
     sky:['#039be5','#01337a'], far:'#0277bd', grass:'#c9a978', dirt:'#8d6e4f', bg:'ocean',
     deco:['🐠','🐡','🪸','🐙','🦀','🐚','🐟'],
     song:1, speed:228, choices:2, obs:['mine','weed'], obsN:2, bosses:2 },
 
   { id:'tower', ja:'かじの ビル', jaSpeak:'火事のビル', en:'Burning Tower', icon:'🔥', words:'food',
-    pup:'marshall', feat:'fire', mode:'fire', alwaysVeh:true,
+    pup:'marshall', feat:'fire', mode:'fire',
     mission:'ほのおを すいでっぽうで けさないと すすめない！',
     sky:['#4e2a1e','#c62828'], far:'#5d4037', grass:'#795548', dirt:'#4e342e', bg:'indoor', deco:['🧯','🪑','📦','🚪','🧱'],
     song:4, speed:240, choices:3, obs:['barrel'], obsN:2, bosses:3 },
 
   { id:'sky', ja:'そらの うえ', jaSpeak:'空の上', en:'High Sky', icon:'☁️', words:'colors',
-    pup:'skye', feat:'air', mode:'sky', alwaysVeh:true,
+    pup:'skye', feat:'air', mode:'sky',
     mission:'ヘリで そらを とび、ミサイルで じゃまを ふきとばせ！',
     sky:['#4fc3f7','#e8f6ff'], far:'#b3e5fc', grass:'#e1f5fe', dirt:'#b3e5fc', bg:'sky', deco:['🌈','🎈','⭐','🕊️'],
     song:3, speed:252, choices:3, obs:['balloon'], obsN:2, bosses:3 },
 
   { id:'rockmt', ja:'いわやま', jaSpeak:'岩山', en:'Rock Mountain', icon:'⛰️', words:'vehicles',
-    pup:'rubble', feat:'rock', mode:'run', alwaysVeh:true,
+    pup:'rubble', feat:'rock', mode:'run',
     mission:'いわを ドリルで ほらないと すすめない！',
     sky:['#8fd8ff','#ffe0b2'], far:'#8d6e63', grass:'#a1887f', dirt:'#6d4c41', bg:'hills', deco:['🪨','🌵','🦎','⛏️','🏔️'],
     song:2, speed:262, choices:4, obs:['barrel','tire'], obsN:3, bosses:3 },
 
   { id:'ruins', ja:'はいきょ', jaSpeak:'廃墟', en:'Ruins', icon:'🏚️', words:'numbers',
-    pup:'rocky', feat:'bridge', mode:'run', alwaysVeh:true,
+    pup:'rocky', feat:'bridge', mode:'run',
     mission:'こわれた はしを なおしながら すすめ！',
     sky:['#8fa5b0','#dfe7ea'], far:'#607d8b', grass:'#8d9ba3', dirt:'#546e7a', bg:'hills', deco:['🏚️','🪵','🕸️','🔩','🛞'],
     song:5, speed:272, choices:4, obs:['barrel','tire','cone'], obsN:3, bosses:4 },
