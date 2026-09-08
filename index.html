@@ -348,7 +348,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsug34t';
+const ASSET_V = '?v=mtsva6r5';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -976,6 +976,8 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
   const list = line.length ? line : (typeof PUPS !== 'undefined' ? PUPS.slice(0, 6) : []);
 
   let t0 = performance.now(), raf = 0, launching = 0, done = false, retry = 0;
+  // ★ 経過時間は コマの 差を ためて つくる（時計を そのまま 使わない）
+  let clock = 0, prevTs = 0;
   const clouds = Array.from({ length: 7 }, (_, i) => ({
     x: Math.random() * 960, y: 40 + Math.random() * 120,
     s: 0.5 + Math.random() * 0.8, v: 6 + Math.random() * 10,
@@ -1003,7 +1005,10 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
   }
 
   function frame(now) {
-    const t = (now - t0) / 1000;
+    // 1コマの 差は 最大 0.05秒。裏に まわって いた ぶんは 進めない。
+    if (prevTs) clock += Math.min(0.05, Math.max(0, (now - prevTs) / 1000));
+    prevTs = now;
+    const t = clock;
     // ── そら ──
     const dawn = Math.min(1, t / 2.2);
     const g = c.createLinearGradient(0, 0, 0, 540);
@@ -1158,7 +1163,7 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
     // しゃべると voiceDuck が はたらいて BGM が 14% まで しぼられ、
     // オープニングの あいだ ずっと 行進曲が きこえなく なる。
     // オープニングは 曲を きかせる 場面なので 声は 入れない。
-    launching = (performance.now() - t0) / 1000;
+    launching = clock;
     btn.classList.add('hidden');
   }
 
@@ -3457,11 +3462,12 @@ function draw() {
   } else if (hintT > 0) {
     ctx.globalAlpha = Math.min(1, hintT); ctx.fillStyle = '#fff';
     ctx.beginPath(); ctx.roundRect(W / 2 - 320, 88, 640, 58, 30); ctx.fill();
-    ctx.fillStyle = '#33363d'; ctx.font = `800 22px ${fam}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#33363d'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const tipTap = loc.mode === 'swim' ? '👆 タップで うかぶ！ 🌀ボタンで スクリュー！'
       : loc.mode === 'sky' ? '👆 タップで じょうしょう！ 🚀ボタンで ミサイル！'
       : '👆 タップでジャンプ！ 🪙コイン100まいで 🚗ビークル！';
-    ctx.fillText(tipTap, W / 2, 117); ctx.globalAlpha = 1;
+    fitText(ctx, tipTap, W / 2, 117, 588, 800, 22, fam, 13);   // 枠(640)の 内がわに おさめる
+    ctx.globalAlpha = 1;
   }
   const b = $('btnSkill'), act = flyT > 0 || swimT > 0 || searchT > 0 || screwT > 0, cl = coolLeft(pup.skill);
   const near = nearFeat() || (inArena() && pup.skill === boss.need ? true : null);
@@ -3533,6 +3539,7 @@ function drawDrive() {
 //  20.5-26.0  タイトル と せいせき
 const END_MOVIE_DUR = 26.0;
 let endRaf = 0, endT0 = 0, endConf = [], endFw = [], endSkip = false;
+let endClock = 0, endPrev = 0;   // 経過時間は コマの 差を ためて つくる
 function stopEndMovie() { if (endRaf) cancelAnimationFrame(endRaf); endRaf = 0; }
 function startEndMovie() {
   const cv = $('endCv'); if (!cv) return;
@@ -3540,6 +3547,7 @@ function startEndMovie() {
   const card = $('endCard');
   card.classList.add('hidden');
   endT0 = performance.now(); endSkip = false;
+  endClock = 0; endPrev = 0;
   endConf = []; endFw = [];
   const COLS = ['#ff5252','#ffd54f','#4fc3f7','#81c784','#ba68c8','#ffb74d','#fff'];
   for (let i = 0; i < 90; i++) endConf.push({ x: Math.random() * 960, y: -Math.random() * 700,
@@ -3571,7 +3579,9 @@ function startEndMovie() {
   }
 
   function frame(ts) {
-    const t = Math.min(END_MOVIE_DUR, (ts - endT0) / 1000);
+    if (endPrev) endClock += Math.min(0.05, Math.max(0, (ts - endPrev) / 1000));
+    endPrev = ts;
+    const t = Math.min(END_MOVIE_DUR, endClock);
 
     // ── そら（夜 → あさやけ）──
     const dawn = Math.min(1, t / 4.2);
