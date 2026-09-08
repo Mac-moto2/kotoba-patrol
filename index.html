@@ -348,7 +348,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsslvu1';
+const ASSET_V = '?v=mtsso006';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -2076,9 +2076,9 @@ function bossHurtPlayer() {
 function bossDamage() {
   boss.hp--; boss.flash = 0.7; shake = 0.6; sfx.bossDown();
   burst(boss.x, GROUND - 190, boss.col, 30); burst(boss.x, GROUND - 80, '#fff59d', 22);
-  for (let i = 0; i < 6; i++) popCoin(boss.x - 80 + i * 32, GROUND - 130 - i * 8);
   bossShots.length = 0; boss.plan = [];
   if (boss.hp <= 0) { bossDefeat(); return; }
+  for (let i = 0; i < 6; i++) popCoin(boss.x - 80 + i * 32, GROUND - 130 - i * 8);
   boss.need = bossNeed(); boss.atk = 1.8; boss.warn = 0;
   floats.push({ text: `💥 こうかバツグン！ のこり ${boss.hp}`, x: player.x + 70, y: player.y - 150, life: 2.2, color: '#d81b60' });
   updateHud();
