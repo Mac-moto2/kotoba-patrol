@@ -344,7 +344,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsr4uta';
+const ASSET_V = '?v=mtsr7xza';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -3535,6 +3535,9 @@ function startEndMovie() {
     // ── ばめん E：タイトル と せいせき ──
     if (t > 20.6) {
       const tp = Math.min(1, (t - 20.6) / 0.8);
+      // 文字を よみやすく する ための したじき
+      c.save(); c.globalAlpha = 0.55 * tp; c.fillStyle = '#06122b';
+      c.beginPath(); c.roundRect(120, 88, 720, 300, 28); c.fill(); c.restore();
       const bounce = tp < 1 ? -Math.cos(tp * Math.PI) * 26 * (1 - tp) : 0;
       const y = 150 + (1 - ease(tp)) * -150 + bounce;
       c.save(); c.textAlign = 'center'; c.textBaseline = 'middle';
