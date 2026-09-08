@@ -340,7 +340,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsmxbji';
+const ASSET_V = '?v=mtsmxqzk';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -1899,7 +1899,8 @@ function spawnTrueBoss() {
   const at = Math.max(player.x + 1250, boss.x + 900);
   boss = { ja: B.ja, face: B.face, col: B.col, x: at, hp: B.hp, max: B.hp,
            t: 0, atk: 2.4, warn: 0, warnAir: false, flash: 0, dead: false,
-           need: 'hammer', pat: B.pat, plan: [], cycle: 0, big: true, key: 'true' };
+           need: 'hammer', pat: B.pat, plan: [], cycle: 0, big: true, key: 'true',
+           rise: 3.2 };   // 3.2秒 かけて じめんから せりあがる（この間は こうげきしない）
   boss.need = bossNeed();
   arenaOn = false; bossShots.length = 0;
   goalX = boss.x + 760; maxItemX = goalX + 600;
@@ -1943,8 +1944,18 @@ function updateBoss(dt) {
       }
     }
   }
+  if (boss && boss.rise > 0) {                    // 登場演出ちゅう
+    boss.rise -= dt;
+    shake = Math.max(shake, 0.25 + Math.sin(boss.t * 20) * 0.1);
+    if (Math.random() < 0.5) particles.push({ x: boss.x + (Math.random() - .5) * 200,
+      y: GROUND - Math.random() * 40, vx: (Math.random() - .5) * 120, vy: -80 - Math.random() * 160,
+      life: .7, color: ['#7cb342','#9575cd','#8d6e63'][Math.floor(Math.random() * 3)] });
+    if (boss.rise <= 0) { boss.rise = 0; sfx.boss(); shake = 1.0;
+      floats.push({ text: '👑 かかってこい！', x: boss.x - 40, y: GROUND - 330, life: 2.4, color: '#33691e' }); }
+  }
   if (inArena()) {
     boss.t += dt; boss.flash = Math.max(0, boss.flash - dt);
+    if (boss.rise > 0) return;                    // せりあがりが おわるまで 撃たない
     // よていの たまを 時間が きた ものから 撃つ
     if (boss.plan && boss.plan.length) {
       for (let i = boss.plan.length - 1; i >= 0; i--) {
@@ -2463,7 +2474,11 @@ function drawStageBoss() {
   if (imgOK(bim)) {
     const K = (boss.big ? 1.42 : 1.05);
     const bh = bim.naturalHeight * K, bw = bim.naturalWidth * K;
-    ctx.save(); ctx.translate(sx, GROUND + bob);
+    // 登場演出：じめんの 下から ゆっくり せりあがる
+    const rise = boss.rise > 0 ? Math.min(1, boss.rise / 3.2) : 0;
+    ctx.save();
+    if (rise > 0) { ctx.beginPath(); ctx.rect(0, 0, W, GROUND); ctx.clip(); }
+    ctx.translate(sx, GROUND + bob + bh * rise);
     const src = hit ? (tinted(bim, 'rgba(255,255,255,.75)') || bim) : bim;
     ctx.drawImage(src, -bw / 2, -bh, bw, bh);
     ctx.restore();
