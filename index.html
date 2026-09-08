@@ -344,7 +344,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsr7yzp';
+const ASSET_V = '?v=mtsr8bcx';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -3329,7 +3329,7 @@ function draw() {
     const cb = $('btnCar');
     cb.classList.toggle('cool', vehCool > 0 && vehT <= 0);
     cb.classList.toggle('on', vehT > 0);
-    cb.classList.toggle('ready', vehT <= 0 && vehCool <= 0);
+    cb.classList.toggle('ready', vehT <= 0 && vehCool <= 0 && canRide());
     cb.classList.toggle('poor', !canRide() && vehT <= 0 && vehCool <= 0);
     cb.querySelector('.lbl').textContent = vehT > 0 ? Math.ceil(vehT) + 'びょう'
       : vehCool > 0 ? Math.ceil(vehCool) + ''
