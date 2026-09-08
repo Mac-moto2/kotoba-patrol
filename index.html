@@ -85,6 +85,10 @@
   #hud .mid{ display:flex; gap:9px; }
   #hud .l{ display:flex; gap:9px; align-items:center; }
   #hud .ub{ font-style:normal; font-size:15px; opacity:.28; }
+  /* 🪙 右上の コイン。ステージ上の コインと おなじ 1まい絵を つかう
+     （絵文字だと 見た目が べつ物に なる）。パスは JS から --coin に 入れる。 */
+  #hud .cico{ display:inline-block; width:24px; height:24px; vertical-align:-5px;
+              background:var(--coin) center/contain no-repeat; font-style:normal; }
   #hud .ub.on{ opacity:1; }
   #hudSkill{ background:linear-gradient(#b3e5fc,#4fc3f7) !important; color:#01579b !important; }
   #actions{ position:absolute; right:16px; bottom:34px; display:flex; gap:14px; pointer-events:none; }
@@ -344,7 +348,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsrrp5o';
+const ASSET_V = '?v=mtsrs3k0';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -438,6 +442,11 @@ const RANKS = ['みならい','ルーキー','たんけんたい','レスキュ�
 // 🪙 コインと 🏁 ゴールの 1まい絵（Gemini で つくった もの）
 const ITEM_IMG = {};
 ['coin', 'goal'].forEach(k => { ITEM_IMG[k] = loadImg(`${IMGDIR}/items/${k}.png${ASSET_V}`); });
+// HUD（右上）の コインも おなじ 絵を つかう。CSS へ パスを わたす。
+try {
+  const v = typeof ASSET_V === 'string' ? ASSET_V : '';
+  document.documentElement.style.setProperty('--coin', `url("${IMGDIR}/items/coin.png${v}")`);
+} catch {}
 const FEAT_PUP = { block:'chase', fire:'marshall', air:'skye', rock:'rubble', bridge:'rocky', current:'zuma' };
 const FEAT_JA  = { block:'ブロックの かべ', fire:'ほのお', air:'そらの じゃま', rock:'おおきな いわ', bridge:'こわれた はし', current:'はやい ながれ' };
 const ALL_SEQ = ['block','fire','air','rock','bridge','current'];
