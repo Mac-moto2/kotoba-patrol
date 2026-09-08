@@ -348,7 +348,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtssl750';
+const ASSET_V = '?v=mtsslonj';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -1790,7 +1790,7 @@ function onChoice(c, btn) {
     if (curBoss) {
       curBoss.dead = true;
       burst(curBoss.x, GROUND - 90, '#ff8a65', 26); burst(curBoss.x, GROUND - 40, '#90a4ae', 22);
-      for (let i = 0; i < 8; i++) popCoin(curBoss.x + (i - 4) * 26, GROUND - 70 - i * 8);
+      awardCoins(25, curBoss.x, GROUND - 90, '中ボス げきは！');
       shake = 0.45;
     }
     updateHud();
@@ -1909,9 +1909,12 @@ function killObstacle(o, quiet = false) {
   for (const f of feats) if (f.kind === o.feat && Math.abs(f.x - o.x) < 220) f.done = true;
   popCoin(o.x, o.y - 30);
 }
-function gainCoin(x, y) {
-  coinN++; progress.coins++; progress.earned++; sfx.coin();
-  for (let i = 0; i < 4; i++) particles.push({ x, y, vx: (Math.random() - 0.5) * 160, vy: -120 - Math.random() * 120, life: 0.45, color: '#ffe082' });
+function gainCoin(x, y, quiet) {
+  coinN++; progress.coins++; progress.earned++;
+  if (!quiet) {
+    sfx.coin();
+    for (let i = 0; i < 4; i++) particles.push({ x, y, vx: (Math.random() - 0.5) * 160, vy: -120 - Math.random() * 120, life: 0.45, color: '#ffe082' });
+  }
   // ❤️ コイン100まいごとに ライフ +1
   if (progress.earned % COIN_PER_LIFE === 0 && progress.earned <= (LIFE_CAP - LIFE_BASE) * COIN_PER_LIFE) {
     life = Math.min(maxLife(), life + 1); sfx.unlock(); shake = 0.3; powerT = 1.4;
@@ -1930,9 +1933,23 @@ function gainCoin(x, y) {
     unlockMsg = `❤️ コイン${progress.earned}まい とうたつ！ ライフの さいだいが ${maxLife()}に アップ！`;
   }
   if (progress.earned % 25 === 0) saveProgress();
-  updateHud();
+  if (!quiet) updateHud();
 }
 function popCoin(x, y) { pops.push({ x, y, vy: -440, life: 0.85 }); gainCoin(x, y); }
+// 👾 中ボス／👑 ステージボスを たおした ときの ごほうび。
+// n まいを 一気に わたす（音は 1回、とび出す コインは 見た目ぶんだけ）。
+function awardCoins(n, x, y, label) {
+  const shown = Math.min(n, 14);
+  for (let i = 0; i < shown; i++)
+    pops.push({ x: x + (i - shown / 2) * 30, y: y - (i % 5) * 18,
+                vy: -420 - Math.random() * 160, life: 0.9 + Math.random() * 0.3 });
+  for (let i = 0; i < n; i++) gainCoin(x, y, true);      // 判定は 1まいずつ 通す
+  for (let i = 0; i < 16; i++) particles.push({ x, y: y - 20, vx: (Math.random() - 0.5) * 420,
+    vy: -180 - Math.random() * 260, life: 0.7 + Math.random() * 0.4, color: '#ffe082' });
+  sfx.chest();
+  floats.push({ text: `🪙 ${label || 'ボーナス'} ＋${n}まい！`, x: x + 10, y: y - 150, life: 2.6, color: '#ff8f00' });
+  updateHud();
+}
 function loseLife(msg) {
   life--; updateHud(); sfx.down();
   if (life <= 0) { saveProgress(); showOver(); return true; }
@@ -2079,7 +2096,7 @@ function bossDefeat() {
   boss.dead = true; boss.hp = 0; arenaOn = false; shake = 1.0;
   bossShots.length = 0; boss.plan = []; sfx.bossDown(); setTimeout(() => sfx.clear(), 420);
   burst(boss.x, GROUND - 200, boss.col, 40); burst(boss.x, GROUND - 90, '#ffd54f', 34);
-  for (let i = 0; i < 14; i++) popCoin(boss.x + (i - 7) * 32, GROUND - 100 - (i % 5) * 20);
+  awardCoins(50, boss.x, GROUND - 130, boss.big ? 'うらボス げきは！' : 'ボス げきは！');
   for (let i = 0; i < 10; i++) floats.push({ text: ['🎉','⭐','🐾'][i % 3], x: boss.x + (Math.random() - 0.5) * 220, y: GROUND - 120 - Math.random() * 120, life: 1.6 + Math.random(), color: '#fff', emoji: true, vx: (Math.random() - 0.5) * 200, vy: -160 - Math.random() * 160 });
   // さいごの ステージだけ、たおした あとに うらボスが あらわれる
   if (stageIdx === LOCS.length - 1 && !trueBossOn) { spawnTrueBoss(); return; }
