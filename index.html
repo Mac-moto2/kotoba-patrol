@@ -335,7 +335,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsqr2sg';
+const ASSET_V = '?v=mtsqsriq';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -422,7 +422,7 @@ const W = 960, H = 540, GROUND = 450, R = 28;
 const GRAV = 1900, JUMP = 760;
 const BOX = 44, MAX_LV = 10, LIFE_BASE = 3, LIFE_CAP = 10, COIN_PER_LIFE = 100;
 const UNLOCK_CAR = 100, UNLOCK_POW = 200;
-const VEH_DUR = 7, VEH_COOL = 16;
+const VEH_DUR = 10, VEH_COOL = 0;      // コイン100まいと ひきかえに 10秒。クールタイムは なし
 const RANKS = ['みならい','ルーキー','たんけんたい','レスキュー','ヒーロー','スーパー','ゴールド','プラチナ','ダイヤ','マスター','パウキング'];
 ['0','1','2','3','4','5','6','true','escape','mid0','mid1','mid2']
   .forEach(k => { BOSS_IMG[k] = loadImg(`${IMGDIR}/bosses/${k}.png${ASSET_V}`); });
@@ -473,7 +473,9 @@ const store = {
   load(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
   save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
 };
-const FRESH = () => ({ unlocked: 0, cleared: {}, lv: 0, best: 0, coins: 0 });
+const FRESH = () => ({ unlocked: 0, cleared: {}, lv: 0, best: 0, coins: 0, earned: 0 });
+// coins  … いま もっている まいすう（ビークルで つかうと へる）
+// earned … これまでに とった つうさん（ライフ上限・パワーアップの めやす。へらない）
 // クリア履歴は のこさない。ひらくたび 1面から はじまる。
 // （のこすと「もういちど」なのに さいごの ステージから 始まる、
 //   といった ずれの もとに なる）
@@ -482,10 +484,10 @@ let prefs = Object.assign({ ja: '', en: '', pitch: 1.0, rate: 0.95 }, store.load
 // 保存しない。よび出しは あちこちに あるが 何も しない。
 const saveProgress = () => {};
 try { localStorage.removeItem('paw-kotoba2'); } catch {}   // 前の 保存を 消す
-const hasCar = () => progress.coins >= UNLOCK_CAR;
-const hasPow = () => progress.coins >= UNLOCK_POW;
+const canRide = () => progress.coins >= UNLOCK_CAR;      // いま 乗れるか（さいふ）
+const hasPow  = () => progress.earned >= UNLOCK_POW;     // つうさんで かいほう
 // 🪙 コイン100まいごとに ライフ +1（さいだい LIFE_CAP）
-const lifeBonus = () => Math.min(LIFE_CAP - LIFE_BASE, Math.floor(progress.coins / COIN_PER_LIFE));
+const lifeBonus = () => Math.min(LIFE_CAP - LIFE_BASE, Math.floor(progress.earned / COIN_PER_LIFE));
 const maxLife = () => LIFE_BASE + lifeBonus();
 const durOf = S => S.dur * (hasPow() ? 1.6 : 1);
 const coolOf = S => S.cool * (hasPow() ? 0.55 : 1);
@@ -1444,7 +1446,7 @@ function updateHud() {
   const ML = maxLife();
   $('hudLife').textContent = ML > 5 ? `❤️ ${Math.max(0, life)}/${ML}`
     : '❤️'.repeat(Math.max(0, life)) + '🤍'.repeat(Math.max(0, ML - life));
-  $('hudCoin').innerHTML = `🪙 ${progress.coins} <i class="ub${hasCar() ? ' on' : ''}">🚗</i><i class="ub${hasPow() ? ' on' : ''}">⚡</i>`;
+  $('hudCoin').innerHTML = `🪙 ${progress.coins} <i class="ub${canRide() ? ' on' : ''}">🚗</i><i class="ub${hasPow() ? ' on' : ''}">⚡</i>`;
   const act = screwT > 0 ? screwT : flyT > 0 ? flyT : swimT > 0 ? swimT : searchT > 0 ? searchT : 0;
   $('hudSkill').classList.toggle('hidden', act <= 0);
   if (act > 0) $('hudSkill').textContent = `${S.icon} ${Math.ceil(act)}`;
@@ -1453,7 +1455,6 @@ function updateHud() {
   b.firstChild.nodeValue = S.icon;
   const cb = $('btnCar');
   cb.classList.toggle('hidden', false);          // いつでも 見せる（コインが たりない ときは くらく する）
-  cb.classList.toggle('poor', !canRide() && vehT <= 0);
   cb.style.background = `radial-gradient(circle at 35% 30%, #fff, ${pup.uni2} 72%)`;
 }
 // ═════════ ミッションブリーフィング / brief ═════════
@@ -1673,10 +1674,18 @@ function useSkill() {
   updateHud(); refreshSwap();
 }
 function useVehicle() {
-  if (state !== 'play' || !hasCar() || vehCool > 0 || vehT > 0 || loc.alwaysVeh) return;
+  if (state !== 'play' || vehT > 0 || vehCool > 0) return;
+  if (!canRide()) {                                   // コインが たりない
+    sfx.wrong();
+    floats.push({ text: `🪙 あと ${UNLOCK_CAR - progress.coins}まいで ビークルに のれる！`, x: player.x + 50, y: player.y - 120, life: 2.0, color: '#ff8f00' });
+    return;
+  }
+  progress.coins -= UNLOCK_CAR;                       // ★ コインを 100まい つかう
   vehT = VEH_DUR; vehCool = VEH_COOL + VEH_DUR; inv = Math.max(inv, VEH_DUR);
   sfx.engine(); sfx.siren();
-  floats.push({ text: `🚗 ${pup.ja}の ビークル とうじょう！`, x: player.x + 50, y: player.y - 120, life: 2.2, color: pup.uni });
+  floats.push({ text: `🚗 ${pup.ja}の ビークル とうじょう！ 10びょう むてき！`, x: player.x + 50, y: player.y - 150, life: 2.4, color: pup.uni });
+  floats.push({ text: `🪙 -${UNLOCK_CAR}（のこり ${progress.coins}）`, x: player.x + 50, y: player.y - 110, life: 2.0, color: '#ff8f00' });
+  updateHud();
   0;
 }
 canvas.addEventListener('pointerdown', e => { e.preventDefault(); ensureAudio(); jump(); });
@@ -1792,10 +1801,10 @@ function showClear() {
   saveProgress();
   const last = stageIdx >= LOCS.length - 1;
   $('clearTitle').textContent = `🎉 ${loc.ja} クリア！ 🎉`;
-  $('clearLv').textContent = `👾 中ボス ${needBoss}たい ＋ 👑 ${boss ? boss.ja : 'ボス'} げきは！\n🪙 ${coinN}まい（ごうけい ${progress.coins}）　❤️ さいだい ${maxLife()}　🎖️ ${RANKS[Math.min(rank, MAX_LV)]}`;
-  $('clearUnlock').textContent = unlockMsg || (progress.coins >= UNLOCK_POW ? '🚗⚡ ビークルも パワーアップも ゲットずみ！'
-    : progress.coins >= UNLOCK_CAR ? `⚡ あと ${UNLOCK_POW - progress.coins}まいで のうりょく パワーアップ！`
-    : `🚗 あと ${UNLOCK_CAR - progress.coins}まいで ビークルが てにはいる！`);
+  $('clearLv').textContent = `👾 中ボス ${needBoss}たい ＋ 👑 ${boss ? boss.ja : 'ボス'} げきは！\n🪙 ${coinN}まい（もちきん ${progress.coins}）　❤️ さいだい ${maxLife()}　🎖️ ${RANKS[Math.min(rank, MAX_LV)]}`;
+  $('clearUnlock').textContent = unlockMsg || (progress.coins >= UNLOCK_CAR
+    ? `🚗 コインが ${progress.coins}まい！ 🚗ボタンで 10びょう むてき！`
+    : `🚗 あと ${UNLOCK_CAR - progress.coins}まいで ビークルに のれる！`);
   unlockMsg = '';
   $('btnNext').textContent = last ? '🏆 ゴール！' : `🚓 ${LOCS[stageIdx + 1].ja}へ！`;
   const list = $('wordList'); list.innerHTML = '';
@@ -1851,26 +1860,26 @@ function killObstacle(o, quiet = false) {
   popCoin(o.x, o.y - 30);
 }
 function gainCoin(x, y) {
-  coinN++; progress.coins++; sfx.coin();
+  coinN++; progress.coins++; progress.earned++; sfx.coin();
   for (let i = 0; i < 4; i++) particles.push({ x, y, vx: (Math.random() - 0.5) * 160, vy: -120 - Math.random() * 120, life: 0.45, color: '#ffe082' });
   // ❤️ コイン100まいごとに ライフ +1
-  if (progress.coins % COIN_PER_LIFE === 0 && progress.coins <= (LIFE_CAP - LIFE_BASE) * COIN_PER_LIFE) {
+  if (progress.earned % COIN_PER_LIFE === 0 && progress.earned <= (LIFE_CAP - LIFE_BASE) * COIN_PER_LIFE) {
     life = Math.min(maxLife(), life + 1); sfx.unlock(); shake = 0.3; powerT = 1.4;
-    floats.push({ text: `❤️ コイン${progress.coins}まい！ ライフ +1（❤️${life}）`, x: player.x + 40, y: player.y - 160, life: 2.8, color: '#e91e63' });
+    floats.push({ text: `❤️ コイン${progress.earned}まい！ ライフ +1（❤️${life}）`, x: player.x + 40, y: player.y - 160, life: 2.8, color: '#e91e63' });
     burst(player.x, player.y - 40, '#ff8a80', 20);
   }
-  if (progress.coins === UNLOCK_CAR) {
-    unlockMsg = '🚗 ビークル ゲット！ ❤️ ライフも +1！'; sfx.unlock(); shake = 0.35;
-    floats.push({ text: '🚗 ビークル ゲット！', x: player.x + 40, y: player.y - 130, life: 2.6, color: '#e65100' });
+  if (progress.earned === UNLOCK_CAR) {
+    unlockMsg = '🚗 コイン100まい！ ビークルに のれる！ ❤️ ライフも +1！'; sfx.unlock(); shake = 0.35;
+    floats.push({ text: '🚗 コイン100まい！ 🚗ボタンで ビークル！', x: player.x + 40, y: player.y - 130, life: 2.6, color: '#e65100' });
     0;
-  } else if (progress.coins === UNLOCK_POW) {
+  } else if (progress.earned === UNLOCK_POW) {
     unlockMsg = '⚡ とくいわざが パワーアップ！ ❤️ ライフも +1！'; sfx.unlock(); shake = 0.45; powerT = 1.8;
     floats.push({ text: '⚡ のうりょく パワーアップ！', x: player.x + 40, y: player.y - 130, life: 2.8, color: '#6a1b9a' });
     0;
-  } else if (progress.coins % COIN_PER_LIFE === 0) {
-    unlockMsg = `❤️ コイン${progress.coins}まい とうたつ！ ライフの さいだいが ${maxLife()}に アップ！`;
+  } else if (progress.earned % COIN_PER_LIFE === 0) {
+    unlockMsg = `❤️ コイン${progress.earned}まい とうたつ！ ライフの さいだいが ${maxLife()}に アップ！`;
   }
-  if (progress.coins % 25 === 0) saveProgress();
+  if (progress.earned % 25 === 0) saveProgress();
   updateHud();
 }
 function popCoin(x, y) { pops.push({ x, y, vy: -440, life: 0.85 }); gainCoin(x, y); }
@@ -3176,12 +3185,15 @@ function draw() {
   b.classList.toggle('ready', !act && cl <= 0 && !!near);
   const left = flyT > 0 ? flyT : swimT > 0 ? swimT : searchT > 0 ? searchT : 0;
   b.querySelector('.lbl').textContent = left > 0 ? Math.ceil(left) + 'びょう' : cl > 0 ? Math.ceil(cl) + '' : mySkill().ja;
-  if (hasCar()) {
+  {
     const cb = $('btnCar');
     cb.classList.toggle('cool', vehCool > 0 && vehT <= 0);
     cb.classList.toggle('on', vehT > 0);
     cb.classList.toggle('ready', vehT <= 0 && vehCool <= 0);
-    cb.querySelector('.lbl').textContent = vehT > 0 ? (vehT === Infinity ? 'そうこうちゅう' : Math.ceil(vehT) + 'びょう') : vehCool > 0 ? Math.ceil(vehCool) + '' : 'ビークル';
+    cb.classList.toggle('poor', !canRide() && vehT <= 0 && vehCool <= 0);
+    cb.querySelector('.lbl').textContent = vehT > 0 ? Math.ceil(vehT) + 'びょう'
+      : vehCool > 0 ? Math.ceil(vehCool) + ''
+      : canRide() ? '🪙100' : `あと${UNLOCK_CAR - progress.coins}`;
   }
 }
 function drawRankFx() {
