@@ -340,7 +340,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtspe0xt';
+const ASSET_V = '?v=mtspmqtl';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -1520,7 +1520,15 @@ function buildMap() {
     : progress.coins >= UNLOCK_CAR ? `🚗 ゲット！ あと ${UNLOCK_POW - progress.coins} で ⚡`
     : `あと ${UNLOCK_CAR - progress.coins} で 🚗`;
 }
-$('go').addEventListener('pointerdown', e => { e.preventDefault(); ensureAudio(); sfx.tap(); startStage(Math.min(progress.unlocked, LOCS.length - 1)); });
+$('go').addEventListener('pointerdown', e => {
+  e.preventDefault(); ensureAudio(); sfx.tap();
+  // 全部 クリア済み（unlocked が ステージ数に とどいて いる）なら
+  // ボタンは「もういちど パトロール！」なので 1面から はじめる。
+  // ここが min(unlocked, 6) の ままだと、いきなり さいごの ステージが
+  // 始まって しまう（文言と 動きが 食いちがう）。
+  const i = progress.unlocked >= LOCS.length ? 0 : Math.min(progress.unlocked, LOCS.length - 1);
+  startStage(i);
+});
 // ═════════ なかま きりかえ（ステージ7）/ swap bar ═════════
 function buildSwap() {
   swapEl.innerHTML = '';
