@@ -344,7 +344,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsrenun';
+const ASSET_V = '?v=mtsrhnx0';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -799,7 +799,9 @@ function playSong(i) { if (songIdx === i && bgm.on) return; const was = bgm.on; 
   setInterval(() => {
     if (!useFile || !started) return;
     applyVol();
-    if (soundOn && el.paused) { const p = el.play(); if (p && p.catch) p.catch(() => {}); }
+    // bgm.on を みる：stopBgm() した ちょくご に ここが 鳴らし直すと
+    //（うらボス登場の しずけさ など）演出上の 無音が 0.4秒で こわれる。
+    if (soundOn && bgm.on && el.paused) { const p = el.play(); if (p && p.catch) p.catch(() => {}); }
     if (!soundOn && !el.paused) { try { el.pause(); } catch {} }
   }, 400);
 })();
@@ -2113,7 +2115,12 @@ function updateCine(dt) {
     if (c.lit < at && t >= at) { c.lit = at; c.flash = 1; sfx.thunder(); }
   }
   // うらボスの 曲
-  if (!c.songDone && t >= 3.0) { c.songDone = true; try { if (TRUE_SONG >= 0) playSong(TRUE_SONG); } catch {} }
+  if (!c.songDone && t >= 3.0) {
+    c.songDone = true;
+    // うらボス曲が なければ ラスボス曲。どちらも 無ければ ステージの 曲。
+    const w = TRUE_SONG >= 0 ? TRUE_SONG : (BOSS_SONG >= 0 ? BOSS_SONG : loc.song);
+    try { playSong(w); } catch {}
+  }
   // ほうこう
   if (!c.roared && t >= 6.2) { c.roared = true; c.flash = 1.6; shake = 1.6; sfx.roar();
     for (let i = 0; i < 40; i++) particles.push({ x: boss.x, y: GROUND - 200,
