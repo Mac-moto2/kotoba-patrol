@@ -340,7 +340,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtso115r';
+const ASSET_V = '?v=mtsozujw';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -676,6 +676,104 @@ function stopBgm() {
   try { bgm.gain.disconnect(); } catch {}
 }
 function playSong(i) { if (songIdx === i && bgm.on) return; const was = bgm.on; stopBgm(); songIdx = i; if ((was || soundOn) && audioCtx && soundOn) startBgm(); }
+// ═══ BGM-PACK BEGIN ═══
+// レンダリング済み BGM の 差し込み。scripts/music/wire-bgm.mjs が 生成。
+// 手で 直さない（再実行で 上書きされる）。
+(function () {
+  if (typeof Audio === 'undefined') return;          // headless では 何も しない
+
+  const FILES = ["bay.mp3","beach.mp3","farm.mp3","mount.mp3","snow.mp3","jungle.mp3","city.mp3","patrol.mp3","lastboss.mp3"];
+  const BASE = 'bgm/';
+  const VOL = 0.55;                                  // ふだんの 音量
+  const DUCK = 0.26;                                 // しゃべって いる あいだ
+
+  const el = new Audio();
+  el.loop = true;
+  el.preload = 'auto';
+  el.playsInline = true;
+  el.volume = VOL;
+
+  let useFile = true;      // mp3 が 使えるか
+  let wantIdx = -1;        // 鳴らしたい 曲
+  let started = false;     // ユーザー操作の あとか
+
+  el.addEventListener('error', () => {
+    // 1曲でも 読めなければ 元の 合成に もどす（無音に しない）
+    useFile = false;
+    try { if (bgm && !bgm.on && soundOn && audioCtx) origStart(); } catch {}
+  });
+
+  function applyVol() {
+    el.volume = (soundOn ? VOL : 0) * (speakDuck ? DUCK : 1);
+  }
+
+  function playFile(i) {
+    if (!FILES[i]) return false;
+    const src = BASE + FILES[i] + (typeof ASSET_V === 'string' ? ASSET_V : '');
+    if (!el.src.endsWith(FILES[i]) || el.paused) {
+      if (!el.src.includes(FILES[i])) el.src = src;
+      applyVol();
+      const p = el.play();
+      if (p && p.catch) p.catch(() => { started = false; });   // 操作前は 拒否される
+    } else {
+      applyVol();
+    }
+    return true;
+  }
+
+  const origStart = startBgm, origStop = stopBgm, origApply = applyDuck;
+
+  startBgm = function () {
+    if (!useFile) return origStart.apply(this, arguments);
+    wantIdx = songIdx;
+    bgm.on = true;                                   // ゲーム側の 状態は そろえて おく
+    started = true;
+    playFile(wantIdx);
+  };
+
+  stopBgm = function () {
+    if (!useFile) return origStop.apply(this, arguments);
+    bgm.on = false;
+    try { el.pause(); } catch {}
+  };
+
+  applyDuck = function () {
+    origApply.apply(this, arguments);                // 合成側にも 反映（保険）
+    if (useFile) applyVol();
+  };
+
+  // 曲の きりかえ：おなじ 曲なら 何も しない
+  const origPlaySong = playSong;
+  playSong = function (i) {
+    if (!useFile) return origPlaySong.apply(this, arguments);
+    if (songIdx === i && !el.paused) return;
+    songIdx = i;
+    wantIdx = i;
+    try { el.pause(); } catch {}
+    el.src = BASE + (FILES[i] || FILES[0]) + (typeof ASSET_V === 'string' ? ASSET_V : '');
+    if (started && soundOn) { bgm.on = true; playFile(i); }
+  };
+
+  // iOS は ユーザー操作の 中で 一度 再生しないと 以後 鳴らせない。
+  // 最初の タップ（ensureAudio）で かならず 鳴らしはじめる。
+  if (typeof ensureAudio === 'function') {
+    const origEnsure = ensureAudio;
+    ensureAudio = function () {
+      const r = origEnsure.apply(this, arguments);
+      if (useFile && soundOn) { started = true; bgm.on = true; playFile(wantIdx >= 0 ? wantIdx : songIdx); }
+      return r;
+    };
+  }
+
+  // 音の ON/OFF ボタンにも ついていく
+  setInterval(() => {
+    if (!useFile || !started) return;
+    applyVol();
+    if (soundOn && el.paused) { const p = el.play(); if (p && p.catch) p.catch(() => {}); }
+    if (!soundOn && !el.paused) { try { el.pause(); } catch {} }
+  }, 400);
+})();
+// ═══ BGM-PACK END ═══
 // ── ダッキング：画面ごとの きほん音量 × よみあげ中の 減衰 ──
 const SPEAK_DUCK = 0.26;
 let duckBase = 1.35, speakDuck = false;
