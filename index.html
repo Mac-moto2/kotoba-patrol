@@ -336,7 +336,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsqsypv';
+const ASSET_V = '?v=mtsqth8w';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -1504,7 +1504,8 @@ function showBrief(i) {
     d.appendChild(n); ros.appendChild(d);
   });
   show('brief');
-  say(L.allPups ? 'さいしゅうミッション！ぜんいん、しゅつどう！' : `${pupById(L.pup).ja}、しゅつどう！`);
+  const cryPup = L.allPups ? PUPS[0] : pupById(L.pup);        // さいしゅうステージは リーダーが よぶ
+  speakSeq([[cryPup.ja, 'ja'], ['、しゅつどう！', 'ja']]);
 }
 $('briefGo').addEventListener('pointerdown', e => { e.preventDefault(); ensureAudio(); sfx.tap(); startStage(briefIdx); });
 // ═════════ ミッションマップ / map ═════════
@@ -1543,7 +1544,9 @@ $('go').addEventListener('pointerdown', e => {
   // ボタンは「もういちど パトロール！」なので 1面から はじめる。
   // ここが min(unlocked, 6) の ままだと、いきなり さいごの ステージが
   // 始まって しまう（文言と 動きが 食いちがう）。
-  const i = progress.unlocked >= LOCS.length ? 0 : Math.min(progress.unlocked, LOCS.length - 1);
+  const again = progress.unlocked >= LOCS.length;
+  if (again) { const lv = progress.lv; progress = FRESH(); progress.lv = lv; rank = lv; }   // コインも 記録も リセット
+  const i = again ? 0 : Math.min(progress.unlocked, LOCS.length - 1);
   startStage(i);
 });
 // ═════════ なかま きりかえ（ステージ7）/ swap bar ═════════
