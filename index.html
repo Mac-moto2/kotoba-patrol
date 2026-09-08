@@ -340,7 +340,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsmxqzk';
+const ASSET_V = '?v=mtsmylue';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -575,7 +575,9 @@ const bgm = { on:false, step:0, next:0, timer:0, gain:null, pad:null, stepLen:0.
 let songIdx = MAP_SONG;
 const midi = m => 440 * Math.pow(2, (m - 69) / 12);
 // ── リード／ベース：デチューン2重オシレータ＋ローパス＋ADSR ──
+let bgmNotes = 0;      // BGMが ほんとうに 鳴っているかの 手がかり
 function bgmNote(freq, t, dur, type, vol, cutMul = 7) {
+  bgmNotes++;
   const g = audioCtx.createGain(), f = audioCtx.createBiquadFilter();
   f.type = 'lowpass'; f.Q.value = 3.0;
   f.frequency.setValueAtTime(Math.min(11000, freq * cutMul + 900), t);
@@ -803,7 +805,7 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
                     .filter(Boolean);
   const list = line.length ? line : (typeof PUPS !== 'undefined' ? PUPS.slice(0, 6) : []);
 
-  let t0 = performance.now(), raf = 0, launching = 0, done = false;
+  let t0 = performance.now(), raf = 0, launching = 0, done = false, retry = 0;
   const clouds = Array.from({ length: 7 }, (_, i) => ({
     x: Math.random() * 960, y: 40 + Math.random() * 120,
     s: 0.5 + Math.random() * 0.8, v: 6 + Math.random() * 10,
@@ -918,6 +920,29 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
         c.fillStyle = '#fff'; c.font = 'bold 15px sans-serif'; c.textAlign = 'center';
         c.fillText(P.ja, x, ny + 17);
         c.globalAlpha = 1;
+      }
+    }
+
+    // ── 音の じょうたい（原因を つかむ ための 表示）──
+    if (launching) {
+      let st = 'ctx:-';
+      try { st = 'ctx:' + (audioCtx ? audioCtx.state : 'null'); } catch {}
+      let sg = '-', on = '-';
+      try { sg = (SONGS[songIdx] && SONGS[songIdx].name) || '?'; on = bgm.on ? 'ON' : 'OFF'; } catch {}
+      c.save();
+      c.font = '13px ui-monospace, monospace'; c.textAlign = 'left';
+      c.fillStyle = 'rgba(0,0,0,.5)';
+      const line = `♪ ${sg} / ${on} / ${st} / notes:${typeof bgmNotes === 'number' ? bgmNotes : '-'}`;
+      const wpx = c.measureText(line).width + 14;
+      c.fillRect(8, 512, wpx, 20);
+      c.fillStyle = (typeof bgmNotes === 'number' && bgmNotes > 0) ? '#8bc34a' : '#ff8a80';
+      c.fillText(line, 15, 526);
+      c.restore();
+      // 鳴っていなければ もう一度 かけ直す（最大3回）
+      if (typeof bgmNotes === 'number' && bgmNotes === 0 && retry < 3 && t - launching > 0.6 * (retry + 1)) {
+        retry++;
+        try { ensureAudio(); } catch {}
+        try { if (typeof PATROL_SONG === 'number' && PATROL_SONG >= 0) playSong(PATROL_SONG); } catch {}
       }
     }
 
