@@ -348,7 +348,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtssw8d8';
+const ASSET_V = '?v=mtstcyda';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -1161,65 +1161,83 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
 // ═══ VOICE-PACK BEGIN ═══
 // 録音済み音声の 差し込み。scripts/voice/wire-voice.mjs が 生成。
 // 手で 直さない（再実行で 上書きされる）。
+//
+// ■ 2026-09-08 に 作り直した 理由
+//   まえの 版は、解錠(unlockVoice)の ときに しゃべる要素を el.muted=true に して
+//   鳴らして いた。ミュートを もどすのは play() の Promise が 解決した あと
+//   （＝マイクロタスク）なので、すぐ あとに はじまった セリフが
+//   「ミュートの まま 再生される」ことが あった。
+//   さらに play() が しくじると unlocked=false に もどす ため、
+//   タップの たびに もう一度 ミュートされる 悪循環に なる。
+//   ヘッドレス検査で play:voice/word.fruits.0.ja.mp3(muted) を 実測して 確認した。
+//
+// ■ いまの 作り
+//   1) まず WebAudio(audioCtx) で 鳴らす。効果音と まったく おなじ 道なので、
+//      効果音が 鳴って いる 端末なら かならず 鳴る。
+//   2) audioCtx が つかえない ときだけ <audio> 要素で 鳴らす。
+//      解錠は「ほんとうに 無音の ファイル」を ミュートせずに 再生して おこなう。
+//   3) どちらも だめなら これまでどおり 合成音声に 落ちる。
 (function () {
-  // Audio が 無い 環境（headless の game_sim など）では 何も しない
-  if (typeof Audio === 'undefined') return;
+  if (typeof Audio === 'undefined') return;          // headless では 何も しない
 
   const VOICE = {"en|apple":"word.fruits.0.en.mp3","en|banana":"word.fruits.1.en.mp3","en|grapes":"word.fruits.2.en.mp3","en|strawberry":"word.fruits.3.en.mp3","en|orange":"word.fruits.4.en.mp3","en|peach":"word.fruits.5.en.mp3","en|watermelon":"word.fruits.6.en.mp3","en|pineapple":"word.fruits.7.en.mp3","en|cherry":"word.fruits.8.en.mp3","en|melon":"word.fruits.9.en.mp3","en|dog":"word.animals.0.en.mp3","en|cat":"word.animals.1.en.mp3","en|rabbit":"word.animals.2.en.mp3","en|elephant":"word.animals.3.en.mp3","en|lion":"word.animals.4.en.mp3","en|panda":"word.animals.5.en.mp3","en|monkey":"word.animals.6.en.mp3","en|frog":"word.animals.7.en.mp3","en|turtle":"word.animals.8.en.mp3","en|penguin":"word.animals.9.en.mp3","en|car":"word.vehicles.0.en.mp3","en|bus":"word.vehicles.1.en.mp3","en|train":"word.vehicles.2.en.mp3","en|airplane":"word.vehicles.3.en.mp3","en|ship":"word.vehicles.4.en.mp3","en|bicycle":"word.vehicles.5.en.mp3","en|ambulance":"word.vehicles.6.en.mp3","en|fire truck":"word.vehicles.7.en.mp3","en|helicopter":"word.vehicles.8.en.mp3","en|police car":"word.vehicles.9.en.mp3","en|red":"word.colors.0.en.mp3","en|blue":"word.colors.1.en.mp3","en|yellow":"word.colors.2.en.mp3","en|green":"word.colors.3.en.mp3","en|purple":"word.colors.5.en.mp3","en|pink":"word.colors.6.en.mp3","en|brown":"word.colors.7.en.mp3","en|black":"word.colors.8.en.mp3","en|white":"word.colors.9.en.mp3","en|bread":"word.food.0.en.mp3","en|rice":"word.food.1.en.mp3","en|egg":"word.food.2.en.mp3","en|milk":"word.food.3.en.mp3","en|ice cream":"word.food.5.en.mp3","en|cheese":"word.food.8.en.mp3","en|noodles":"word.food.9.en.mp3","en|two":"word.numbers.1.en.mp3","en|three":"word.numbers.2.en.mp3","en|four":"word.numbers.3.en.mp3","en|five":"word.numbers.4.en.mp3","en|six":"word.numbers.5.en.mp3","en|eight":"word.numbers.7.en.mp3","en|nine":"word.numbers.8.en.mp3","en|ten":"word.numbers.9.en.mp3","en|cake":"word.food.4.en.mp3","en|pizza":"word.food.6.en.mp3","en|cookie":"word.food.7.en.mp3","en|one":"word.numbers.0.en.mp3","en|seven":"word.numbers.6.en.mp3","ja|りんご":"word.fruits.0.ja.mp3","ja|バナナ":"word.fruits.1.ja.mp3","ja|ぶどう":"word.fruits.2.ja.mp3","ja|いちご":"word.fruits.3.ja.mp3","ja|みかん":"word.fruits.4.ja.mp3","ja|もも":"word.fruits.5.ja.mp3","ja|スイカ":"word.fruits.6.ja.mp3","ja|パイナップル":"word.fruits.7.ja.mp3","ja|さくらんぼ":"word.fruits.8.ja.mp3","ja|メロン":"word.fruits.9.ja.mp3","ja|いぬ":"word.animals.0.ja.mp3","ja|ねこ":"word.animals.1.ja.mp3","ja|うさぎ":"word.animals.2.ja.mp3","ja|ぞう":"word.animals.3.ja.mp3","ja|ライオン":"word.animals.4.ja.mp3","ja|パンダ":"word.animals.5.ja.mp3","ja|さる":"word.animals.6.ja.mp3","ja|かえる":"word.animals.7.ja.mp3","ja|かめ":"word.animals.8.ja.mp3","ja|ペンギン":"word.animals.9.ja.mp3","ja|車":"word.vehicles.0.ja.mp3","ja|バス":"word.vehicles.1.ja.mp3","ja|電車":"word.vehicles.2.ja.mp3","ja|飛行機":"word.vehicles.3.ja.mp3","ja|船":"word.vehicles.4.ja.mp3","ja|自転車":"word.vehicles.5.ja.mp3","ja|救急車":"word.vehicles.6.ja.mp3","ja|消防車":"word.vehicles.7.ja.mp3","ja|ヘリコプター":"word.vehicles.8.ja.mp3","ja|パトカー":"word.vehicles.9.ja.mp3","ja|あか":"word.colors.0.ja.mp3","ja|あお":"word.colors.1.ja.mp3","ja|きいろ":"word.colors.2.ja.mp3","ja|みどり":"word.colors.3.ja.mp3","ja|オレンジ":"word.colors.4.ja.mp3","ja|むらさき":"word.colors.5.ja.mp3","ja|ピンク":"word.colors.6.ja.mp3","ja|ちゃいろ":"word.colors.7.ja.mp3","ja|くろ":"word.colors.8.ja.mp3","ja|しろ":"word.colors.9.ja.mp3","ja|パン":"word.food.0.ja.mp3","ja|ごはん":"word.food.1.ja.mp3","ja|たまご":"word.food.2.ja.mp3","ja|牛乳":"word.food.3.ja.mp3","ja|ケーキ":"word.food.4.ja.mp3","ja|アイス":"word.food.5.ja.mp3","ja|ピザ":"word.food.6.ja.mp3","ja|クッキー":"word.food.7.ja.mp3","ja|チーズ":"word.food.8.ja.mp3","ja|ラーメン":"word.food.9.ja.mp3","ja|いち":"word.numbers.0.ja.mp3","ja|に":"word.numbers.1.ja.mp3","ja|あれれ。もう一度がんばろう！":"line.00.mp3","ja|とくいわざがパワーアップ！":"line.02.mp3","ja|やったー！ぜんぶクリア！ことばパトロール、だいせいこう！":"line.03.mp3","ja|正解！":"line.13.mp3","ja|中ボスは ぜんぶ たおした！ つぎは ステージボスだ！":"tail.midBossAll.mp3","ja|さん":"word.numbers.2.ja.mp3","ja|よん":"word.numbers.3.ja.mp3","ja|ご":"word.numbers.4.ja.mp3","ja|ろく":"word.numbers.5.ja.mp3","ja|なな":"word.numbers.6.ja.mp3","ja|はち":"word.numbers.7.ja.mp3","ja|きゅう":"word.numbers.8.ja.mp3","ja|じゅう":"word.numbers.9.ja.mp3","ja|チェイス、しゅつどう！":"cry.chase.mp3","ja|マーシャル、しゅつどう！":"cry.marshall.mp3","ja|スカイ、はっしゃ！":"cry.skye.mp3","ja|スカイ":"pup.skye.mp3","ja|ラブル、ほるよ！":"cry.rubble.mp3","ja|ラブル":"pup.rubble.mp3","ja|ロッキー、なおすよ！":"cry.rocky.mp3","ja|ズーマ、いくよ！":"cry.zuma.mp3","ja|アドベンチャーベイ":"loc.bay.mp3","ja|深い海":"loc.sea.mp3","ja|火事のビル":"loc.tower.mp3","ja|空の上":"loc.sky.mp3","ja|岩山":"loc.rockmt.mp3","ja|廃墟":"loc.ruins.mp3","ja|ナイトシティ":"loc.city.mp3","ja|ドロボーロボ":"boss.0.mp3","ja|タコタコキング":"boss.1.mp3","ja|ファイヤードラゴン":"boss.2.mp3","ja|カミナリドローン":"boss.3.mp3","ja|ガラクタゴーレム":"boss.4.mp3","ja|サビサビロボ":"boss.5.mp3","ja|メカ・パウキング":"boss.6.mp3","ja|ざんねん。答えは":"line.01.mp3","ja|よし！ もういちど とくいわざだ！":"line.04.mp3","ja|ズーマ、スクリュー ぜんかい！":"line.07.mp3","ja|ビークル、しゅつどう！":"line.08.mp3","ja|ビークルをゲットした！":"line.09.mp3","ja|ロッキー、なおしたよ！":"line.11.mp3","ja|ロッキー、ボスを バラバラに！":"line.12.mp3","ja|違うよ。ライフがひとつ減っちゃった。もう一回！":"line.14.mp3","ja|、しゅつどう！":"tail.shutsudou.mp3","ja|が あらわれた！ とくいわざで こうげきだ！":"tail.appeared.mp3","ja|を たおした！ ゴールへ いそげ！":"tail.defeated.mp3","ja|の ちからだ！":"tail.nextPower.mp3","ja|へ しゅつどう！":"tail.nextPlace.mp3","ja|コインが たまった！ ライフが ひとつ ふえた！":"tail.coinLife.mp3","ja|つぎは、":"tail.next.mp3","ja|チェイス":"pup.chase.mp3","ja|マーシャル":"pup.marshall.mp3","ja|ロッキー":"pup.rocky.mp3","ja|ズーマ":"pup.zuma.mp3"};
   const BASE = 'voice/';
-  const FIRST = "word.fruits.0.en.mp3";
+  const SILENCE = '_silence.mp3';                    // ほんとうに 無音（解錠用）
+  const AV = () => (typeof ASSET_V === 'string' ? ASSET_V : '');
 
-  // iOS Safari は ユーザー操作の 中で 一度 再生した Audio要素しか
-  // その後 鳴らせない。要素を 1つだけ 作って 使い回し、
-  // 最初の タップ（ensureAudio）で 無音再生して 解錠する。
-  const el = new Audio();          // セリフを しゃべる ための 要素
+  // ── ① WebAudio の 道 ────────────────────────────
+  const bufs = new Map();
+  function loadBuf(url) {
+    if (bufs.has(url)) return bufs.get(url);
+    if (bufs.size > 60) {                            // ふるい ものから 捨てる
+      let n = 0;
+      for (const k of bufs.keys()) { if (n++ >= 20) break; bufs.delete(k); }
+    }
+    const p = fetch(url)
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+      .then(b => new Promise((res, rej) => {
+        const q = audioCtx.decodeAudioData(b, res, rej);
+        if (q && q.then) q.then(res, rej);           // 新しい API の 形
+      }));
+    bufs.set(url, p);
+    p.catch(() => bufs.delete(url));
+    return p;
+  }
+  let waNode = null;
+  function stopWA() {
+    if (!waNode) return;
+    try { waNode.onended = null; waNode.stop(); } catch {}
+    waNode = null;
+  }
+  const canWA = () => !!(typeof audioCtx !== 'undefined' && audioCtx && master &&
+                         audioCtx.state === 'running' && typeof fetch === 'function');
+
+  // ── ② <audio> 要素の 道 ─────────────────────────
+  const el = new Audio();
   el.preload = 'auto';
   el.playsInline = true;
-  // 解錠は べつの 要素で おこなう。おなじ 要素を つかうと、
-  // 解錠の 非同期な pause() が すぐ あとに はじまった セリフを 止め、
-  // onended が こない → voiceDuck(false) が よばれない →
-  // BGM が 14% に しぼられた ままに なる（じっさいに 起きた）。
-  const unlockEl = new Audio();
-  unlockEl.preload = 'auto';
-  unlockEl.playsInline = true;
-  unlockEl.muted = true;
   let unlocked = false;
-  let speaking = false;          // いま el で しゃべって いるか
   function unlockVoice() {
     if (unlocked) return;
     unlocked = true;
-    // 予備の 要素
+    // ★ ミュートは つかわない。無音ファイルを そのまま 鳴らして 解錠する。
     try {
-      unlockEl.src = BASE + FIRST;
-      const p = unlockEl.play();
-      const fin = () => { try { unlockEl.pause(); unlockEl.currentTime = 0; } catch {} };
-      if (p && p.then) p.then(fin).catch(() => {});
-      else fin();
+      el.src = BASE + SILENCE + AV();
+      const p = el.play();
+      if (p && p.catch) p.catch(() => {});
     } catch {}
-    // ★ しゃべる 要素も この タップの 中で 一度 鳴らして 解錠する。
-    //   iOS の 解錠は 要素ごと。ここを やらないと、
-    //   クイズの「りんご」「いぬ」が いっさい 鳴らなく なる。
-    //   すぐ あとに セリフが 始まって いる ときは 止めない（speaking で 判定）。
-    try {
-      el.muted = true;
-      if (!el.src) el.src = BASE + FIRST + ASSET_V;
-      const q = el.play();
-      const fin2 = () => {
-        if (!speaking) { try { el.pause(); el.currentTime = 0; } catch {} }
-        el.muted = false;
-      };
-      if (q && q.then) q.then(fin2).catch(() => { el.muted = false; unlocked = false; });
-      else fin2();
-    } catch { el.muted = false; }
   }
   if (typeof ensureAudio === 'function') {
     const origEnsure = ensureAudio;
     ensureAudio = function () { unlockVoice(); return origEnsure.apply(this, arguments); };
   }
 
+  let speaking = false;
   const origCancel = cancelSpeak;
   cancelSpeak = function () {
+    stopWA();
     try { el.pause(); } catch {}
+    speaking = false;
     origCancel();
   };
 
@@ -1233,35 +1251,51 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
 
     const my = ++speakToken;
     try { speechSynthesis.cancel(); } catch {}
+    stopWA();
     speaking = true;
     voiceDuck(true);
     return new Promise(res => {
       let i = 0, settled = false, guard = 0;
-      const done = () => {
+      const finish = () => {
         if (settled || my !== speakToken) return;
         settled = true; clearTimeout(guard); speaking = false; voiceDuck(false); res();
       };
-      // 保険：さいあく 再生が 止まっても かならず ダッキングを もどす。
-      // もどし わすれると BGM が しぼられた ままに なる。
-      guard = setTimeout(() => {
-        if (settled) return;
-        settled = true; speaking = false; voiceDuck(false); res();
-      }, 2500 + files.length * 3500);
-      const fallback = () => {                       // 再生に 失敗したら 合成音声へ
+      const toSynth = () => {                        // さいごの てだて
         if (settled || my !== speakToken) return;
         settled = true; clearTimeout(guard); speaking = false; voiceDuck(false);
         origSeq(parts.slice(i)).then(res);
       };
-      const next = () => {
-        if (my !== speakToken) return done();
-        if (i >= files.length) return done();
-        el.onended = () => { i++; setTimeout(next, 120); };
-        el.onerror = fallback;
-        el.src = BASE + files[i] + ASSET_V;
-        const pr = el.play();
-        if (pr && pr.catch) pr.catch(fallback);
+      // 保険：さいあく 再生が 止まっても かならず ダッキングを もどす。
+      guard = setTimeout(() => {
+        if (settled) return;
+        settled = true; speaking = false; voiceDuck(false); stopWA(); res();
+      }, 3000 + files.length * 4000);
+
+      const nextWA = () => {
+        if (settled || my !== speakToken) return finish();
+        if (i >= files.length) return finish();
+        loadBuf(BASE + files[i] + AV()).then(buf => {
+          if (settled || my !== speakToken) return finish();
+          stopWA();
+          const n = audioCtx.createBufferSource();
+          n.buffer = buf;
+          n.connect(master);
+          n.onended = () => { waNode = null; i++; setTimeout(nextWA, 100); };
+          waNode = n;
+          n.start();
+        }).catch(nextEl);                            // 読めなければ 要素の 道へ
       };
-      next();
+      const nextEl = () => {
+        if (settled || my !== speakToken) return finish();
+        if (i >= files.length) return finish();
+        el.onended = () => { i++; setTimeout(nextEl, 120); };
+        el.onerror = toSynth;
+        el.src = BASE + files[i] + AV();
+        const pr = el.play();
+        if (pr && pr.catch) pr.catch(toSynth);
+      };
+
+      if (canWA()) nextWA(); else nextEl();
     });
   };
 })();
