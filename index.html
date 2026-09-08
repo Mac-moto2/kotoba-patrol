@@ -198,7 +198,6 @@
 
   <div id="menu" class="overlay">
     <div id="meTag"><canvas id="meCv" width="104" height="104"></canvas><span id="meTxt">チェイス</span></div>
-    <div id="bank">🪙 <span id="bankN">0</span><i class="bar"><i id="bankBar"></i></i><span id="bankTip"></span></div>
     <button id="gear" title="設定">⚙️</button>
     <h1>ことばパトロール<span>WORD PATROL</span></h1>
     <div id="map"></div>
@@ -340,7 +339,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtspn7a5';
+const ASSET_V = '?v=mtsq42fs';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -479,9 +478,14 @@ const store = {
   save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
 };
 const FRESH = () => ({ unlocked: 0, cleared: {}, lv: 0, best: 0, coins: 0 });
-let progress = Object.assign(FRESH(), store.load('paw-kotoba2', {}));
+// クリア履歴は のこさない。ひらくたび 1面から はじまる。
+// （のこすと「もういちど」なのに さいごの ステージから 始まる、
+//   といった ずれの もとに なる）
+let progress = FRESH();
 let prefs = Object.assign({ ja: '', en: '', pitch: 1.0, rate: 0.95 }, store.load('kotoba-voice2', {}));
-const saveProgress = () => store.save('paw-kotoba2', progress);
+// 保存しない。よび出しは あちこちに あるが 何も しない。
+const saveProgress = () => {};
+try { localStorage.removeItem('paw-kotoba2'); } catch {}   // 前の 保存を 消す
 const hasCar = () => progress.coins >= UNLOCK_CAR;
 const hasPow = () => progress.coins >= UNLOCK_POW;
 // 🪙 コイン100まいごとに ライフ +1（さいだい LIFE_CAP）
@@ -1516,12 +1520,6 @@ function buildMap() {
   const cv = $('meCv'), c = cv.getContext('2d');
   c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, 104, 104); c.scale(2, 2);
   c.save(); c.translate(26, 45); drawPup(c, 0, 0, false, 0, 0.55, NP); c.restore();
-  const goal = progress.coins >= UNLOCK_POW ? UNLOCK_POW : UNLOCK_CAR;
-  $('bankN').textContent = progress.coins;
-  $('bankBar').style.width = Math.min(100, progress.coins / goal * 100) + '%';
-  $('bankTip').textContent = progress.coins >= UNLOCK_POW ? ' 🚗⚡ ぜんぶ ゲット！'
-    : progress.coins >= UNLOCK_CAR ? `🚗 ゲット！ あと ${UNLOCK_POW - progress.coins} で ⚡`
-    : `あと ${UNLOCK_CAR - progress.coins} で 🚗`;
 }
 $('go').addEventListener('pointerdown', e => {
   e.preventDefault(); ensureAudio(); sfx.tap();
