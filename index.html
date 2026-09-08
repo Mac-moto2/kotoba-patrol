@@ -335,7 +335,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsqqtiw';
+const ASSET_V = '?v=mtsqr1rz';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -1378,7 +1378,6 @@ function startStage(i) {
   player = { x: 200, y: GROUND - R, vy: 0, onGround: true, jumps: 0, run: 0 };
   lastSafeX = 200;
   if (!loc.allPups) pup = pupById(loc.pup);
-  if (loc.alwaysVeh) vehT = Infinity;                       // ずっと ビークルに のって いる ステージ
   if (loc.mode === 'swim' || loc.mode === 'sky') { player.y = GROUND - 190; player.onGround = false; }
   if (loc.mode === 'swim') for (let k = 0; k < 40; k++) bubbles.push({ x: rnd() * W, y: rnd() * H, r: 2 + rnd() * 6, v: 22 + rnd() * 40 });
   // ── コース：たんとうパップの ちからが いきる しかけを ならべる ──
@@ -1453,7 +1452,8 @@ function updateHud() {
   b.style.background = `radial-gradient(circle at 35% 30%, #fff, ${pup.uni} 72%)`;
   b.firstChild.nodeValue = S.icon;
   const cb = $('btnCar');
-  cb.classList.toggle('hidden', !hasCar() || !!(loc && loc.alwaysVeh));
+  cb.classList.toggle('hidden', false);          // いつでも 見せる（コインが たりない ときは くらく する）
+  cb.classList.toggle('poor', !canRide() && vehT <= 0);
   cb.style.background = `radial-gradient(circle at 35% 30%, #fff, ${pup.uni2} 72%)`;
 }
 // ═════════ ミッションブリーフィング / brief ═════════
@@ -2125,7 +2125,7 @@ function updateBoss(dt) {
     if (s.zig) s.y = s.y0 + Math.sin(s.t * 16) * s.zig;       // ジグザグ
     if (Math.random() < 0.7) particles.push({ x: s.x + 14, y: s.y + (Math.random() - 0.5) * 16, vx: 60, vy: -30 - Math.random() * 50, life: 0.3, color: s.air ? '#ce93d8' : '#ffab91' });
     if (s.x < camX - 220) { bossShots.splice(i, 1); continue; }
-    if (vehT > 0 && !loc.alwaysVeh && Math.abs(s.x - player.x) < 50 && Math.abs(s.y - player.y) < 54) {
+    if (vehT > 0 && Math.abs(s.x - player.x) < 50 && Math.abs(s.y - player.y) < 54) {
       burst(s.x, s.y, '#ffab91', 14); bossShots.splice(i, 1); sfx.kill(); continue;
     }
     if (shots.some(w => Math.abs(w.x - s.x) < w.r + s.r && Math.abs(w.y - s.y) < 46)) {
@@ -2167,7 +2167,7 @@ function update(dt) {
   if (hammerT > 0) hammerT = Math.max(0, hammerT - dt);
   if (screwT > 0) { screwT -= dt; if (screwT <= 0) screwT = 0; updateHud(); }
   if (loc.autoSwap) autoSwap(dt);
-  if (vehT > 0 && vehT !== Infinity) { vehT -= dt; if (vehT <= 0) { vehT = 0; floats.push({ text: '🚗 ビークル しゅうりょう！', x: player.x + 40, y: player.y - 90, life: 1.4, color: '#455a64' }); } }
+  if (vehT > 0) { vehT -= dt; if (vehT <= 0) { vehT = 0; floats.push({ text: '🚗 ビークル しゅうりょう！', x: player.x + 40, y: player.y - 90, life: 1.4, color: '#455a64' }); } }
   if (flyT > 0) { flyT -= dt; if (flyT <= 0) { flyT = 0; floats.push({ text: '🚁 ちゃくりく！', x: player.x + 40, y: player.y - 90, life: 1.4, color: '#0277bd' }); } updateHud(); }
   if (swimT > 0) { swimT -= dt; if (swimT <= 0) swimT = 0; updateHud(); }
   if (searchT > 0) { searchT -= dt; if (searchT <= 0) searchT = 0; updateHud(); }
@@ -3089,10 +3089,9 @@ function drawPlayer() {
       ctx.beginPath(); ctx.arc(sx - 52 - i * 16, p.y + 6, rr, 0.6, 5.6); ctx.stroke();
     }
   }
-  if (inv > 0 && (vehT <= 0 || loc.alwaysVeh) && Math.floor(inv * 12) % 2 === 0) ctx.globalAlpha = 0.45;
+  if (inv > 0 && vehT <= 0 && Math.floor(inv * 12) % 2 === 0) ctx.globalAlpha = 0.45;
   if (vehT > 0) {
-    if (!loc.alwaysVeh || loc.mode === 'run' || loc.mode === 'fire')
-      for (let i = 0; i < 2; i++) particles.push({ x: p.x - 46, y: p.y + 20, vx: -180 - Math.random() * 120, vy: -20 - Math.random() * 60, life: 0.3, color: 'rgba(200,200,200,.9)' });
+    for (let i = 0; i < 2; i++) particles.push({ x: p.x - 46, y: p.y + 20, vx: -180 - Math.random() * 120, vy: -20 - Math.random() * 60, life: 0.3, color: 'rgba(200,200,200,.9)' });
     drawCar(ctx, sx, p.y + R, 1, pup, hitT > 0 ? 'hurt' : 'normal');
   } else {
     drawPup(ctx, sx, p.y + R, !p.onGround, p.run, 1, pup, hitT > 0 ? 'hurt' : 'normal', true);
@@ -3167,7 +3166,6 @@ function draw() {
     ctx.fillStyle = '#33363d'; ctx.font = `800 22px ${fam}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const tipTap = loc.mode === 'swim' ? '👆 タップで うかぶ！ 🌀ボタンで スクリュー！'
       : loc.mode === 'sky' ? '👆 タップで じょうしょう！ 🚀ボタンで ミサイル！'
-      : loc.alwaysVeh ? `👆 タップで ジャンプ！ ${mySkill().icon}ボタンで ${mySkill().ja}！`
       : '👆 タップでジャンプ！ 🪙コイン100まいで 🚗ビークル！';
     ctx.fillText(tipTap, W / 2, 117); ctx.globalAlpha = 1;
   }
