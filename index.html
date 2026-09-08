@@ -348,7 +348,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtstim3v';
+const ASSET_V = '?v=mtstk2lc';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -1194,13 +1194,12 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
       let n = 0;
       for (const k of bufs.keys()) { if (n++ >= 20) break; bufs.delete(k); }
     }
-    try{console.log("LB-start "+url);}catch{}
     const p = fetch(url)
       .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
-      .then(b => { try{console.log("LB-buf "+(b&&b.__url));}catch{} return new Promise((res, rej) => {
+      .then(b => new Promise((res, rej) => {
         const q = audioCtx.decodeAudioData(b, res, rej);
-        if (q && q.then) q.then(res, rej);
-      }); });
+        if (q && q.then) q.then(res, rej);           // 新しい API の 形
+      }));
     bufs.set(url, p);
     p.catch(() => bufs.delete(url));
     return p;
@@ -1287,11 +1286,9 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
         if (pr && pr.catch) pr.catch(toSynth);
       };
       const nextWA = () => {
-        try{console.log("WA-STEP settled="+settled+" my="+my+" tok="+speakToken+" i="+i);}catch{}
         if (settled || my !== speakToken) return finish();
         if (i >= files.length) return finish();
         loadBuf(BASE + files[i] + AV()).then(buf => {
-          try{console.log("WA-then");}catch{}
           if (settled || my !== speakToken) return finish();
           stopWA();
           const n = audioCtx.createBufferSource();
@@ -1300,7 +1297,7 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
           n.onended = () => { waNode = null; i++; setTimeout(nextWA, 100); };
           waNode = n;
           n.start();
-        }).catch(e => { try{console.log("WA-ERR", e && (e.stack||e.message||e));}catch{} nextEl(); });                    // 読めなければ 要素の 道へ
+        }).catch(() => nextEl());                    // 読めなければ 要素の 道へ
       };
 
       if (canWA()) nextWA(); else nextEl();
