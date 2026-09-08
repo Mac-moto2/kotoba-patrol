@@ -528,8 +528,15 @@ const SONGS = [
   { name:'city', bpm:154, lead:'square', vol:0.05, drums:'march', roots:[55,48,50,52], mel:[
     79,0,0,0, 79,0,81,0, 83,0,0,0, 79,0,0,0,  84,0,0,0, 83,0,81,0, 79,0,78,0, 76,0,0,0,
     74,0,0,0, 79,0,83,0, 86,0,83,0, 79,0,0,0,  81,0,83,0, 84,0,86,0, 88,0,0,0, 0,0,0,0 ] },
+  // 'patrol' … オープニング用の オリジナル行進曲。
+  // I-IV-V-I の 王道進行に 付点リズムを のせた ヒロイックな マーチ。
+  // 既存曲と 同じ 合成エンジンで 鳴らすので 追加容量は ゼロ。
+  { name:'patrol', bpm:152, lead:'square', vol:0.055, drums:'march', roots:[48,53,55,48], mel:[
+    72,0,72,0, 76,0,79,0, 84,0,0,0, 79,0,0,0,  77,0,77,0, 81,0,84,0, 86,0,0,0, 84,0,0,0,
+    79,0,79,0, 83,0,86,0, 88,0,86,0, 83,0,0,0,  84,0,0,79, 0,76,0,72, 74,0,76,0, 72,0,0,0 ] }
 ];
 const MAP_SONG = 0;
+const PATROL_SONG = SONGS.findIndex(x => x.name === 'patrol');
 const bgm = { on:false, step:0, next:0, timer:0, gain:null, pad:null, stepLen:0.1 };
 let songIdx = MAP_SONG;
 const midi = m => 440 * Math.pow(2, (m - 69) / 12);
@@ -906,16 +913,24 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
     // ── しゅつどう！の えんしゅつ ──
     if (launching) {
       const lt = t - launching;
-      c.globalAlpha = Math.max(0, 1 - lt * 1.6); c.fillStyle = '#fff';
+      c.globalAlpha = Math.max(0, 1 - lt * 2.2); c.fillStyle = '#fff';
       c.fillRect(0, 0, 960, 540); c.globalAlpha = 1;
       if (lt > 0.15) {
-        c.save(); c.textAlign = 'center'; c.globalAlpha = Math.min(1, (lt - .15) * 4);
+        // ドンッと 出て、さいごに フェードアウト
+        const pop = Math.min(1, (lt - .15) * 5);
+        const fade = lt > 2.4 ? Math.max(0, 1 - (lt - 2.4) / 0.6) : 1;
+        const sc = 1 + (1 - pop) * 0.7 + Math.sin(lt * 5) * 0.03;
+        c.save(); c.textAlign = 'center'; c.globalAlpha = pop * fade;
+        c.translate(480, 292); c.scale(sc, sc);
         c.font = 'bold 68px "Hiragino Sans",sans-serif';
         c.lineWidth = 14; c.strokeStyle = '#b71c1c';
-        c.strokeText('しゅつどう！', 480, 300); c.fillStyle = '#fff'; c.fillText('しゅつどう！', 480, 300);
+        c.strokeText('しゅつどう！', 0, 0);
+        const fg = c.createLinearGradient(0, -46, 0, 16);
+        fg.addColorStop(0, '#ffffff'); fg.addColorStop(1, '#ffe082');
+        c.fillStyle = fg; c.fillText('しゅつどう！', 0, 0);
         c.restore();
       }
-      if (lt > 1.15 && !done) { done = true; finish(); return; }
+      if (lt > 3.0 && !done) { done = true; finish(); return; }
     }
     raf = requestAnimationFrame(frame);
   }
@@ -929,9 +944,11 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
   function start(e) {
     if (e) e.preventDefault();
     if (launching) return;
-    // iOS は この タップの 中で 音を 解錠する 必要が ある
+    // iOS は この タップの 中で 音を 解錠する 必要が ある。
+    // ensureAudio() が startBgm() を 呼ぶので、その前に 曲を 決める。
+    try { if (typeof PATROL_SONG === 'number' && PATROL_SONG >= 0) songIdx = PATROL_SONG; } catch {}
     try { ensureAudio(); } catch {}
-    try { sfx.siren(); } catch {}
+    try { sfx.siren(); setTimeout(() => { try { sfx.siren(); } catch {} }, 900); } catch {}
     try {
       const P = list[0];
       if (P && typeof speakSeq === 'function') speakSeq([[P.ja, 'ja'], ['、しゅつどう！', 'ja']]);
