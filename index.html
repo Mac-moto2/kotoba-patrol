@@ -19,12 +19,13 @@
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
   html,body{ margin:0; height:100%; background:#0d2b45; overflow:hidden; touch-action:none;
     font-family:"Hiragino Maru Gothic ProN","M PLUS Rounded 1c","Rounded Mplus 1c","Noto Sans JP","Segoe UI",sans-serif; color:var(--ink); }
-  #stage{ position:absolute; left:0; top:0; width:960px; height:540px; transform-origin:0 0; }
+  #stage{ overflow:hidden; position:absolute; left:0; top:0; width:960px; height:540px; transform-origin:0 0; }
   canvas{ display:block; width:960px; height:540px; border-radius:14px; }
   .overlay{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
   .hidden{ display:none !important; }
   .row{ display:flex; gap:16px; }
-  .bigbtn{ border:0; border-radius:40px; padding:12px 30px; font-size:24px; font-weight:800; font-family:inherit; color:#fff; background:var(--pop); box-shadow:0 5px 0 #c62828; cursor:pointer; }
+  .bigbtn{ border:0; border-radius:40px; padding:12px 30px; font-size:24px; font-weight:800; font-family:inherit; color:#fff; background:var(--pop); box-shadow:0 5px 0 #c62828; cursor:pointer;
+           max-width:calc(100% - 24px); box-sizing:border-box; overflow-wrap:anywhere; line-height:1.25; }
   .bigbtn.alt{ background:var(--sky); box-shadow:0 5px 0 #0277bd; }
   .bigbtn:active{ transform:translateY(3px); box-shadow:0 2px 0 rgba(0,0,0,.3); }
   /* ── ミッションブリーフィング ── */
@@ -79,11 +80,16 @@
   .panel .tip{ font-size:13px; color:#8a929e; margin-top:10px; line-height:1.5; }
   .panel .reset{ display:block; margin:10px auto 0; background:none; border:0; color:#8a929e; font-family:inherit; font-size:14px; text-decoration:underline; cursor:pointer; }
   /* ── HUD ── */
-  #hud{ position:absolute; left:0; right:0; top:0; display:flex; align-items:center; justify-content:space-between; padding:10px 14px; pointer-events:none; }
+  #hud{ position:absolute; left:0; right:0; top:0; display:flex; align-items:center; justify-content:space-between; padding:10px 14px; pointer-events:none;
+        gap:8px; box-sizing:border-box; }
+  #hud > *{ min-width:0; }
+  #hud .mid{ flex:0 1 auto; min-width:0; }
+  #hud div{ white-space:nowrap; }
   #hud button, #hud div{ pointer-events:auto; background:rgba(255,255,255,.92); border:0; border-radius:40px; font-size:21px; padding:6px 15px; box-shadow:0 3px 0 rgba(0,0,0,.15); font-family:inherit; font-weight:800; color:var(--ink); }
   #hud button{ cursor:pointer; width:52px; height:52px; padding:0; }
   #hud .mid{ display:flex; gap:9px; }
   #hud .l{ display:flex; gap:9px; align-items:center; }
+  #hud .r{ display:flex; gap:9px; align-items:center; }
   #hud .ub{ font-style:normal; font-size:15px; opacity:.28; }
   /* 🪙 右上の コイン。ステージ上の コインと おなじ 1まい絵を つかう
      （絵文字だと 見た目が べつ物に なる）。パスは JS から --coin に 入れる。 */
@@ -148,6 +154,9 @@
   #over{ background:rgba(20,40,60,.8); color:#fff; }
   #over h2{ font-size:40px; margin:0 0 6px; text-shadow:0 3px 0 rgba(0,0,0,.4); }
   #over p{ font-size:20px; margin:0 0 18px; line-height:1.6; }
+  #pause{ background:rgba(10,20,45,.66); color:#fff; border-radius:14px; backdrop-filter:blur(3px); }
+  #pause h2{ font-size:46px; margin:0 0 6px; text-shadow:0 4px 0 #0d47a1, 0 8px 20px rgba(0,0,0,.45); }
+  #pause p{ font-size:20px; margin:0 0 18px; font-weight:800; text-shadow:0 2px 0 rgba(0,0,0,.4); }
   #ending{ background:#08122c; color:#fff; border-radius:14px; padding:0; }
   #ending canvas{ position:absolute; inset:0; width:960px; height:540px; border-radius:14px; }
   #endCard{ position:relative; z-index:2; display:flex; flex-direction:column; align-items:center;
@@ -178,7 +187,7 @@
       <div id="hudBoss">👾 0 / 2</div>
       <div id="hudSkill" class="hidden">🚁 9</div>
     </div>
-    <button id="hudSound" title="Sound">🔊</button>
+    <div class="r"><button id="hudPause" title="Pause">⏸</button><button id="hudSound" title="Sound">🔊</button></div>
   </div>
   <div id="actions" class="hidden">
     <button id="btnCar" class="act hidden">🚗<span class="lbl">ビークル</span></button>
@@ -257,8 +266,17 @@
     </div>
   </div>
 
+  <div id="pause" class="overlay hidden">
+    <h2>⏸ きゅうけい</h2>
+    <p id="pauseTxt">つづきから あそべるよ</p>
+    <div class="row">
+      <button class="bigbtn" id="btnResume">▶️ つづける</button>
+      <button class="bigbtn alt" id="btnPauseHome">🗺️ マップへ</button>
+    </div>
+  </div>
+
   <div id="ending" class="overlay hidden">
-    <canvas id="endCv" width="960" height="540"></canvas>
+    <canvas id="endCv" width="0" height="0"></canvas>
     <div id="endCard" class="hidden">
       <h2>🏆 ぜんぶ クリア！ 🏆</h2>
       <p id="endTxt">きみは ことばパトロールの ヒーローだ！</p>
@@ -348,7 +366,7 @@ const pupById = id => PUPS.find(p => p.id === id);
 // ═════════ スプライト画像（Gemini生成・すべて右向き）═════════
 const PUP_IMG = {}, PUP_RUN = {}, CAR_IMG = {}, TINT = new Map();
 const IMGDIR = 'images/2026/09';
-const ASSET_V = '?v=mtsvksmm';
+const ASSET_V = '?v=mttehz7a';
 const BOSS_IMG = {};              // ステージボスの 1まい絵（0〜6 と うらボス true）
 const loadImg = src => { const im = new Image(); im.src = src; return im; };
 PUPS.forEach(P => {
@@ -360,6 +378,14 @@ const imgOK = im => im && im.complete && im.naturalWidth > 0;
 function tinted(im, col) {                     // やられ演出：赤くフラッシュした版をキャッシュ
   if (!imgOK(im)) return null;
   if (TINT.has(im)) return TINT.get(im);
+  // ためこみすぎない（1枚 約1MB。iPad の メモリ不足で 落ちる もとに なる）
+  while (TINT.size >= 8) {
+    const k = TINT.keys().next().value;
+    if (k === undefined) break;
+    const old = TINT.get(k);
+    try { old.width = old.height = 0; } catch {}
+    TINT.delete(k);
+  }
   const cv = document.createElement('canvas');
   cv.width = im.naturalWidth; cv.height = im.naturalHeight;
   const c = cv.getContext('2d');
@@ -1146,6 +1172,8 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
   function finish() {
     cancelAnimationFrame(raf);
     intro.classList.add('hidden');
+    // 画布の 中身（約2MB）を 手放す。オープニングは 2度と 出ない。
+    try { cv.width = 0; cv.height = 0; } catch {}
     // マップの 表示を さいしんに する。
     // screen('menu') は 曲を マップ曲に もどして しまうので よばない
     //（オープニングの 行進曲を そのまま つづけたい）。
@@ -1206,12 +1234,18 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
   const AV = () => (typeof ASSET_V === 'string' ? ASSET_V : '');
 
   // ── ① WebAudio の 道 ────────────────────────────
+  // ★ iPad が メモリ不足で 落ちない ように、ためこむ 数を しぼる。
+  //   1本 平均1.3秒 → 48kHz float32 で 約250KB。24本で 約6MB。
+  //   ステージが 変われば つかう ことばも 変わる ので、そこで 捨てる。
+  const BUF_MAX = 24;
   const bufs = new Map();
+  globalThis.__voiceCacheClear = () => bufs.clear();
   function loadBuf(url) {
     if (bufs.has(url)) return bufs.get(url);
-    if (bufs.size > 60) {                            // ふるい ものから 捨てる
-      let n = 0;
-      for (const k of bufs.keys()) { if (n++ >= 20) break; bufs.delete(k); }
+    while (bufs.size >= BUF_MAX) {                   // ふるい ものから 捨てる
+      const k = bufs.keys().next().value;
+      if (k === undefined) break;
+      bufs.delete(k);
     }
     const p = fetch(url)
       .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
@@ -1224,11 +1258,16 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
     return p;
   }
   let waNode = null;
-  function stopWA() {
-    if (!waNode) return;
-    try { waNode.onended = null; waNode.stop(); } catch {}
-    waNode = null;
+  // つなぎっぱなしの ノードは 中の 音（数百KB）を かかえた ままに なる。
+  // 鳴りおわったら かならず 切りはなして 手放す。
+  function dropNode(n) {
+    if (!n) return;
+    try { n.onended = null; } catch {}
+    try { n.stop(); } catch {}
+    try { n.disconnect(); } catch {}
+    try { n.buffer = null; } catch {}
   }
+  function stopWA() { dropNode(waNode); waNode = null; }
   const canWA = () => !!(typeof audioCtx !== 'undefined' && audioCtx && master &&
                          audioCtx.state === 'running' && typeof fetch === 'function');
 
@@ -1313,7 +1352,7 @@ const speakWord = it => speakSeq([[wordText(it, 'ja'), 'ja'], [it.en, 'en']]);
           const n = audioCtx.createBufferSource();
           n.buffer = buf;
           n.connect(master);
-          n.onended = () => { waNode = null; i++; setTimeout(nextWA, 100); };
+          n.onended = () => { dropNode(n); waNode = null; i++; setTimeout(nextWA, 100); };
           waNode = n;
           n.start();
         }).catch(() => nextEl());                    // 読めなければ 要素の 道へ
@@ -1524,6 +1563,8 @@ function startStage(i) {
   if (loc.snow) for (let k = 0; k < 40; k++) flakes.push({ x: rnd() * W, y: rnd() * H, s: 1 + rnd() * 2, v: 20 + rnd() * 40 });
   camX = player.x - 240;
   buildSwap();
+  // つかう ことばが 変わる ので、ためこんだ 音声を 手放す（メモリ対策）
+  try { if (typeof __voiceCacheClear === 'function') __voiceCacheClear(); } catch {}
   playSong(loc.song); show('play'); updateHud();
   sfx.siren();
   // 🔊 出動の かけ声。タップの ながれの 中で よぶ こと（iOS の 解錠が きれない ように）。
@@ -1533,6 +1574,7 @@ function startStage(i) {
 }
 function show(s) {
   state = s;
+  if (paused && s !== 'play' && s !== 'card' && s !== 'rankup') setPause(false);
   briefEl.classList.toggle('hidden', s !== 'brief');
   menu.classList.toggle('hidden', s !== 'menu');
   hud.classList.toggle('hidden', s === 'menu' || s === 'brief' || s === 'end' || s === 'drive');
@@ -1685,6 +1727,7 @@ function refreshSwap() {
 }
 // ═════════ そうさ / input ═════════
 function jump() {
+  if (paused) return;
   if (state !== 'play') return;
   const p = player;
   if (loc.mode === 'swim') {                      // 🌊 うみ：タップで うかびあがる
@@ -1718,6 +1761,7 @@ function clearFeat(kind, range, back = 150) {
   return n;
 }
 function useSkill() {
+  if (paused) return;
   if (state !== 'play' || coolLeft(pup.skill) > 0) return;
   const S = mySkill(), p = player, PW = hasPow();
   cools[pup.skill] = coolOf(S) + durOf(S);
@@ -1787,7 +1831,7 @@ function useSkill() {
   updateHud(); refreshSwap();
 }
 function useVehicle() {
-  if (state !== 'play' || vehT > 0 || vehCool > 0) return;
+  if (paused || state !== 'play' || vehT > 0 || vehCool > 0) return;
   if (!canRide()) {                                   // コインが たりない
     sfx.wrong();
     floats.push({ text: `🪙 あと ${UNLOCK_CAR - progress.coins}まいで ビークルに のれる！`, x: player.x + 50, y: player.y - 120, life: 2.0, color: '#ff8f00' });
@@ -2248,7 +2292,7 @@ function updateCine(dt) {
   }
 }
 function drawCine() {
-  const c = cine, t = c.t, fam = getComputedStyle(document.body).fontFamily;
+  const c = cine, t = c.t, fam = FAM;
   // ① あんてん（まわりを くらく する）
   const dark = Math.min(0.72, t / 1.3 * 0.72) * (t > c.dur - 0.8 ? Math.max(0, (c.dur - t) / 0.8) : 1);
   ctx.fillStyle = `rgba(6,10,4,${dark})`; ctx.fillRect(0, 0, W, H);
@@ -2552,7 +2596,14 @@ function nearFeat() {
   return null;
 }
 // ═════════ え / draw ═════════
-function emo(c, t, x, y, size) { c.font = `${size}px ${EMOJI_FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(t, x, y); }
+function emo(c, t, x, y, size) {
+  // 絵文字用の 家族名も 端末に よっては 受けつけられない。
+  // 入らなかった ときは ふつうの フォントに 落とす（大きさだけは かならず 合わせる）。
+  const px = Math.max(1, Math.round(size));
+  c.font = `${px}px ${EMOJI_FONT}`;
+  if (String(c.font).indexOf(px + 'px') < 0) c.font = `${px}px sans-serif`;
+  c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(t, x, y);
+}
 const OUTC = '#4b3a30';
 const HX = 15, HY = -25, HR = 17.5;      // あたまの ちゅうしん／はんけい
 // ── みみ ──
@@ -2812,7 +2863,7 @@ function drawVehicle(c, x, y, sc, P) {
 // ── 👾 中ボス ──
 function drawBoss(b) {
   const sx = b.x - camX; if (sx < -260 || sx > W + 260) return;
-  const fam = getComputedStyle(document.body).fontFamily;
+  const fam = FAM;
   const bob = Math.sin(time * 2.2 + b.t) * 5, col = ['#7e57c2', '#546e7a', '#00838f'][b.idx % 3];
   const K = 1;
   // 四角い オーラは やめる（背景に うすい グレーの 板が 見える ため）。
@@ -2867,7 +2918,7 @@ function drawBoss(b) {
 function drawStageBoss() {
   if (!boss || boss.dead) return;
   const sx = boss.x - camX; if (sx < -360 || sx > W + 360) return;
-  const fam = getComputedStyle(document.body).fontFamily;
+  const fam = FAM;
   const bob = Math.sin(time * 1.8) * 8, hit = boss.flash > 0 && Math.floor(boss.flash * 22) % 2 === 0;
   const col = hit ? '#ffffff' : boss.col, NP = needPup();
   // 四角い オーラは やめる。足もとの かげ だけ。
@@ -2957,11 +3008,40 @@ function drawEscapee() {
 }
 // 決めた 幅に おさまるまで 文字を 小さくして 描く。
 // カードから 文字が はみだす 事故を まとめて 防ぐ。
+// ① canvas が じっさいに 受けつける 家族名を 起動時に 1回だけ 決める。
+//    受けつけない 家族名を わたすと ctx.font の 代入が 無視される。
+const FAM = (() => {
+  let want = 'sans-serif';
+  try { want = getComputedStyle(document.body).fontFamily || want; } catch {}
+  try {
+    const t = document.createElement('canvas').getContext('2d');
+    t.font = '900 36px ' + want;
+    if (String(t.font).indexOf('36px') >= 0) return want;      // ちゃんと 入った
+  } catch {}
+  return 'sans-serif';                                          // だめなら 素の フォント
+})();
+// ② 入れた あと、大きさが 反映されたか 確かめる。
+function setFont(c, weight, size, fam) {
+  const px = Math.max(1, Math.round(size));
+  c.font = `${weight} ${px}px ${fam || FAM}`;
+  if (String(c.font).indexOf(px + 'px') < 0) c.font = `${weight} ${px}px sans-serif`;
+  return px;
+}
+// ③ 縮めても 入らない ときは 横に つぶして かならず 枠に 収める。
 function fitText(c, text, x, y, maxW, weight, size, fam, min = 12) {
   let fs = size;
-  c.font = `${weight} ${fs}px ${fam}`;
+  setFont(c, weight, fs, fam);
   while (c.measureText(text).width > maxW && fs > min) {
-    fs -= 1; c.font = `${weight} ${fs}px ${fam}`;
+    fs -= 1; setFont(c, weight, fs, fam);
+  }
+  const w = c.measureText(text).width;
+  if (w > maxW && w > 0) {
+    const k = maxW / w;
+    c.save();
+    c.translate(x, y); c.scale(k, 1); c.translate(-x, -y);
+    c.fillText(text, x, y);
+    c.restore();
+    return fs;
   }
   c.fillText(text, x, y);
   return fs;
@@ -2989,7 +3069,7 @@ function drawBossShots() {
 }
 function drawBossHud() {
   if (!inArena()) return;
-  const fam = getComputedStyle(document.body).fontFamily;
+  const fam = FAM;
   const w = 430, x0 = W / 2 - w / 2, y0 = 104, NP = needPup();
   ctx.fillStyle = 'rgba(255,255,255,.93)'; ctx.beginPath(); ctx.roundRect(x0 - 12, y0 - 32, w + 24, 62, 20); ctx.fill();
   ctx.font = `900 18px ${fam}`; ctx.textBaseline = 'middle';
@@ -3115,7 +3195,7 @@ function drawObstacle(o) {
   drawStatic(o); ctx.restore();
 }
 function drawBoxes() {
-  const fam = getComputedStyle(document.body).fontFamily, s = BOX / 2;
+  const fam = FAM, s = BOX / 2;
   for (const b of boxes) {
     const sx = b.x - camX; if (sx < -70 || sx > W + 70) continue;
     const k = b.bump > 0 ? Math.sin((1 - b.bump / 0.24) * Math.PI) : 0, live = b.used < b.n;
@@ -3181,7 +3261,7 @@ function drawChests() {
   }
 }
 function drawFeatSigns() {
-  const fam = getComputedStyle(document.body).fontFamily;
+  const fam = FAM;
   for (const f of feats) {
     if (f.done) continue;
     const sx = f.x - camX; if (sx < -140 || sx > W + 140) continue;
@@ -3367,7 +3447,7 @@ function drawGoal() {
     ctx.fillStyle = '#42a5f5'; ctx.beginPath(); ctx.roundRect(gx - 34, GROUND - 104, 68, 44, 8); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#ffca28'; ctx.beginPath(); ctx.roundRect(gx - 22, GROUND - 46, 44, 46, 6); ctx.fill(); ctx.stroke();
   }
-  const fam = getComputedStyle(document.body).fontFamily;
+  const fam = FAM;
   ctx.font = `900 26px ${fam}`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
   ctx.lineWidth = 8; ctx.lineJoin = 'round'; ctx.strokeStyle = '#fff';
   ctx.strokeText('ゴール！', gx, top); ctx.fillStyle = '#d84315'; ctx.fillText('ゴール！', gx, top);
@@ -3440,7 +3520,7 @@ function draw() {
   for (const q of particles) { ctx.fillStyle = q.color; ctx.globalAlpha = Math.max(0, q.life / 0.7); ctx.beginPath(); ctx.arc(q.x - camX, q.y, 5, 0, 6.29); ctx.fill(); }
   ctx.globalAlpha = 1;
   drawPlayer();
-  const fam = getComputedStyle(document.body).fontFamily;
+  const fam = FAM;
   for (const f of floats) {
     ctx.globalAlpha = Math.min(1, f.life); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     if (f.emoji) { ctx.font = `30px ${EMOJI_FONT}`; ctx.fillText(f.text, f.x - camX, f.y); continue; }
@@ -3493,7 +3573,7 @@ function draw() {
   }
 }
 function drawRankFx() {
-  const t = rankAnimT, px = player.x - camX, py = player.y, fam = getComputedStyle(document.body).fontFamily;
+  const t = rankAnimT, px = player.x - camX, py = player.y, fam = FAM;
   const rayA = Math.min(1, t / 0.4) * Math.min(1, (2.6 - t) / 0.4);
   ctx.save(); ctx.translate(px, py); ctx.rotate(time * 1.5); ctx.globalAlpha = 0.3 * rayA;
   for (let i = 0; i < 14; i++) { ctx.rotate(6.2832 / 14); ctx.fillStyle = i % 2 ? '#fff59d' : '#4fc3f7'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(1200, -60); ctx.lineTo(1200, 60); ctx.closePath(); ctx.fill(); }
@@ -3515,7 +3595,7 @@ function drawRankFx() {
   }
 }
 function drawDrive() {
-  const k = Math.min(1, driveT / 3.6), fam = getComputedStyle(document.body).fontFamily;
+  const k = Math.min(1, driveT / 3.6), fam = FAM;
   const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#4fc3f7'); g.addColorStop(1, '#e1f5fe');
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   for (const c of clouds) { const sx = ((c.x - time * 260) % (W + 300) + W + 300) % (W + 300) - 150; drawCloud(sx, c.y, c.s, 'rgba(255,255,255,.9)'); }
@@ -3545,11 +3625,18 @@ function drawDrive() {
 const END_MOVIE_DUR = 26.0;
 let endRaf = 0, endT0 = 0, endConf = [], endFw = [], endSkip = false;
 let endClock = 0, endPrev = 0;   // 経過時間は コマの 差を ためて つくる
-function stopEndMovie() { if (endRaf) cancelAnimationFrame(endRaf); endRaf = 0; }
+function stopEndMovie() {
+  if (endRaf) cancelAnimationFrame(endRaf);
+  endRaf = 0;
+  // 画布の 中身（約2MB）を 手放す。つぎに 見る ときに また とる。
+  try { const c = $('endCv'); if (c && !endCardShown()) { c.width = 0; c.height = 0; } } catch {}
+}
+const endCardShown = () => { try { return !$('endCard').classList.contains('hidden'); } catch { return false; } };
 function startEndMovie() {
   const card = $('endCard');
   const cv = $('endCv');
   if (!cv || !cv.getContext) { card.classList.remove('hidden'); return; }   // 映像なしでも 先へ
+  cv.width = 960; cv.height = 540;                 // ここで はじめて 場所を とる
   const c = cv.getContext('2d');
   card.classList.add('hidden');
   endT0 = performance.now(); endSkip = false;
@@ -3566,6 +3653,7 @@ function startEndMovie() {
     stopEndMovie();
     card.classList.remove('hidden');
   }
+  // ※ 画布は マップに もどる ときに 0 に もどす（stopEndMovie で おこなう）
   function skip(e) { if (e) e.preventDefault(); if (endRaf) { endSkip = true; finish(); } }
   cv.onpointerdown = skip;
 
@@ -3732,16 +3820,70 @@ function startEndMovie() {
   const guarded = ts => { try { frame(ts); } catch (e) { finish(); } };
   endRaf = requestAnimationFrame(guarded);
 }
+// ═════════ ⏸ ポーズ / pause ═════════
+// 3さいの 子が とちゅうで やめたい ときに 止められる ように する。
+// 止めて いる あいだは ゲームも 曲も 声も 止める。
+let paused = false;
+function setPause(on) {
+  on = !!on;
+  if (paused === on) return;
+  // あそんで いる ばめん だけ 止められる
+  if (on && !(state === 'play' || state === 'card' || state === 'rankup')) return;
+  paused = on;
+  try { $('pause').classList.toggle('hidden', !on); } catch {}
+  try { $('hudPause').textContent = on ? '▶️' : '⏸'; } catch {}
+  if (on) {
+    try { cancelSpeak(); } catch {}
+    try { stopBgm(); } catch {}
+  } else {
+    lastTs = 0;                                   // 止まって いた ぶんを 一気に すすめない
+    try { if (soundOn) startBgm(); } catch {}
+  }
+}
+try {
+  $('hudPause').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); sfx.tap(); setPause(!paused); });
+  $('btnResume').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); ensureAudio(); sfx.tap(); setPause(false); });
+  $('btnPauseHome').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); sfx.tap(); setPause(false); show('menu'); });
+} catch {}
+
+// ═════════ えらーの みはり / error guard ═════════
+// 画面が だまって 止まるのを ふせぐ。出た えらーは 画面の 上に 出す。
+let errBox = null, errSeen = new Set();
+function showErr(kind, msg, where) {
+  const key = kind + '|' + msg;
+  if (errSeen.has(key)) return;
+  errSeen.add(key);
+  try {
+    if (!errBox) {
+      errBox = document.createElement('div');
+      errBox.style.cssText = 'position:absolute;left:8px;right:8px;top:8px;z-index:200;'
+        + 'background:rgba(183,28,28,.94);color:#fff;font:700 13px/1.45 monospace;'
+        + 'padding:8px 12px;border-radius:10px;white-space:pre-wrap;pointer-events:auto;'
+        + 'max-height:40%;overflow:auto;box-shadow:0 4px 16px rgba(0,0,0,.4)';
+      errBox.addEventListener('pointerdown', e => { e.stopPropagation(); errBox.remove(); errBox = null; });
+      (document.getElementById('stage') || document.body).appendChild(errBox);
+    }
+    errBox.textContent += `⚠ ${kind}: ${msg}\n   ${where || ''}\n（タップで けす）\n`;
+  } catch {}
+}
+addEventListener('error', e => showErr('えらー', e.message || String(e.error || ''), `${e.filename || ''}:${e.lineno || ''}`));
+addEventListener('unhandledrejection', e => showErr('未処理', String((e.reason && e.reason.message) || e.reason || ''), ''));
+
 // ═════════ ループ / loop ═════════
 function frame(ts) {
   requestAnimationFrame(frame);
   if (!loc) return;
-  if (state === 'play' || state === 'rankup' || state === 'drive') {
+  if (paused) { lastTs = 0; }
+  else if (state === 'play' || state === 'rankup' || state === 'drive') {
     const dt = lastTs ? Math.min(0.033, (ts - lastTs) / 1000) : 0; lastTs = ts;
-    if (state === 'play') update(dt); else if (state === 'rankup') updateRankUp(dt); else updateDrive(dt);
+    try {
+      if (state === 'play') update(dt); else if (state === 'rankup') updateRankUp(dt); else updateDrive(dt);
+    } catch (e) { showErr('うごき', (e && e.message) || String(e), (e && e.stack || '').split('\n')[1] || ''); }
   } else lastTs = 0;
-  if (state === 'drive') drawDrive();
-  else if (state === 'play' || state === 'card' || state === 'rankup' || state === 'over') { draw(); if (state === 'rankup') drawRankFx(); if (cine) drawCine(); }
+  try {
+    if (state === 'drive') drawDrive();
+    else if (state === 'play' || state === 'card' || state === 'rankup' || state === 'over') { draw(); if (state === 'rankup') drawRankFx(); if (cine) drawCine(); }
+  } catch (e) { showErr('えがき', (e && e.message) || String(e), (e && e.stack || '').split('\n')[1] || ''); }
 }
 requestAnimationFrame(frame);
 show('menu');
